@@ -11,7 +11,645 @@ from plotly.subplots import make_subplots
 pio.renderers.default = "browser"
 
 
-MIN_PATCH_SIZE = 0.25  # inches
+class PunchingShearSection:
+    """
+    PunchingShear Section objects are numerical representation of a critical punching 
+    shear perimeter around a column in a concrete slab.
+    
+    Input Args:
+        width                   float:: column support dimension along x
+        height                  float:: column support dimension along y
+        slab_depth              float:: slab depth from outermost compression fiber to outer-most tension rebar (average of two directions)
+        condition               str:: specify interior, edge, or corner condition. Valid input include:
+                                            "NW"   "N"   "NE"
+                                             "W"   "I"   "E"
+                                            "SW"   "S"   "SE"
+                                        for example, "SE" is a corner condition with slab edge below and to the right.
+        overhang_x              (OPTIONAL) float:: slab overhang dimension along x beyond column face. default = 0.
+        overhang_y              (OPTIONAL) float:: slab overhang dimension along y beyond column face. default = 0.
+        L_studrail              (OPTIONAL) float:: stud rail length if applicable. default = 0.
+    
+    Public Methods:
+        auto_generate_perimeters()
+        add_perimeter()
+        add_opening()
+        rotate()
+        preview()
+        preview_3D()
+        solve()
+        plot_results()
+        plot_results_3D()
+    """
+    def __init__(self, width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0):
+        # input arguments
+        self.width = width
+        self.height = height
+        self.slab_depth = slab_depth
+        self.condition = condition
+        self.overhang_x = overhang_x
+        self.overhang_y = overhang_y
+        self.L_studrail = L_studrail
+        
+        # used by auto_generate_perimeter() to generate critical shear perimeter
+        self.has_studrail = False if self.L_studrail==0 else True       # bool for if studrail exists
+        self.perimeter_pts = []                                         # list of pts to generate perimeter
+        self.studrail_pts = []                                          # list of pts to plot studrails
+        self.slabedge_pts = []                                          # list of pts to plot slab edge
+        
+        # applied force
+        self.P = None                                   # applied axial force (+ve is downward in gravity direction)
+        self.Mx = None                                  # applied moment about X
+        self.My = None                                  # applied moment about Y
+
+        # geometric properties
+        self.x_centroid = None                          # centroid x
+        self.y_centroid = None                          # centroid y
+        self.A = None                                   # total area of welds
+        self.Ix = None                                  # moment of inertia X
+        self.Iy = None                                  # moment of inertia Y
+        self.Iz = None                                  # polar moment of inertia = Ix + Iy
+        self.Ixy = None                                 # product moment of inertia
+        self.theta_p = None                             # angle offset to principal axis
+        self.Sx1 = None                                 # elastic modulus top fiber
+        self.Sx2 = None                                 # elastic modulus bottom fiber
+        self.Sy1 = None                                 # elastic modulus right fiber
+        self.Sy2 = None                                 # elastic modulus left fiber
+        
+        # dictionary storing perimeter information
+        self.perimeter = {"x_centroid":[],              # x coordinate of centroid of patch
+                           "y_centroid":[],             # y coordinate of centroid of patch
+                           "x_start":[],                # x coordinate of start node
+                           "y_start":[],                # y coordinate of start node
+                           "x_end":[],                  # x coordinate of end node
+                           "y_end":[],                  # y coordinate of end node
+                           "depth":[],                  # patch depth
+                           "length":[],                 # patch length
+                           "area":[],                   # patch area = length * thickness
+                           
+                           "v_axial": [],               # shear stress from axial demand P
+                           "v_Mx": [],                  # shear stress from moment about X
+                           "v_My": [],                  # shear stress from moment about Y
+                           "v_total": [],               # total shear stress is the summation of the above three components. (not always additive)
+                           
+                           "Fz":[],                     # used to verify equilibrium sum_Fz = 0
+                           "Mxi":[],                    # used to verify equilibrium sum_Mx = 0
+                           "Myi":[],                    # used to verify equilibrium sum_My = 0
+                           }
+        self.df_perimeter = None                        # perimeter dict above is converted to dataframe for return to user
+        
+    
+    def add_perimeter(self, start, end, depth):
+        """
+        Add punching perimeter line by specifying two points. 
+        
+        Arguments:
+            start           list:: [x, y] coordinate of first point
+            end             list:: [x, y] coordiante of the second point
+            depth           float:: slab depth along this perimeter
+
+        Return:
+            None
+        """
+        MIN_PATCH_SIZE = 0.5  # 0.5 inches default patch size
+        
+        # convert into numpy arrays
+        start = np.array(start)
+        end = np.array(end)
+        position_vector = end-start
+        
+        # calculate number of segments
+        length_line = np.linalg.norm(position_vector)
+        segments = int(length_line // MIN_PATCH_SIZE) if length_line > MIN_PATCH_SIZE else 1
+        length_segments = length_line / (segments)
+        
+        # discretize into N segments (N+1 end points)
+        alpha = np.linspace(0, 1, segments+1)
+        x_ends = start[0] + alpha * position_vector[0]
+        y_ends = start[1] + alpha * position_vector[1]
+        x_center = [(x_ends[i] + x_ends[i+1]) / 2 for i in range(len(x_ends)-1)]
+        y_center = [(y_ends[i] + y_ends[i+1]) / 2 for i in range(len(y_ends)-1)]
+        
+        # add to dictionary storing discretization
+        self.perimeter["x_centroid"] = self.perimeter["x_centroid"] + list(x_center)
+        self.perimeter["y_centroid"] = self.perimeter["y_centroid"] + list(y_center)
+        self.perimeter["x_start"] = self.perimeter["x_start"] + list(x_ends[:-1])
+        self.perimeter["y_start"] = self.perimeter["y_start"] + list(y_ends[:-1])
+        self.perimeter["x_end"] = self.perimeter["x_end"] + list(x_ends[1:])
+        self.perimeter["y_end"] = self.perimeter["y_end"] + list(y_ends[1:])
+        self.perimeter["length"] = self.perimeter["length"] + [length_segments] * segments
+        self.perimeter["depth"] = self.perimeter["depth"] + [depth] * segments
+        self.perimeter["area"] = self.perimeter["area"] + [depth * length_segments] * segments
+    
+    
+    def auto_generate_perimeters(self):
+        """
+        Auto generate punching shear perimeter based on info provided by user during initialization.
+        
+        Alternatively, the user may specify custom perimeter can calling .add_perimeter() themselves.
+        """
+        # shorthand variable
+        b = self.width
+        h = self.height
+        d = self.slab_depth
+        L = self.L_studrail
+        
+        # switch-case for all 9 conditions
+        if self.condition == "N":
+            self.slabedge_pts.append([[-b/2-L-3*b, h/2+self.overhang_y]   ,    [b/2+L+3*b, h/2+self.overhang_y]])
+            if self.has_studrail:
+                self.perimeter_pts.append([-b/2-L-d/2   ,   h/2+self.overhang_y])
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])
+                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+self.overhang_y])
+
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) # bot
+                self.studrail_pts.append([[b/2, -h/2]   ,    [b/2, -h/2-L]]) # bot
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) # right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) # right
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2-L, h/2]]) # left
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2-L, -h/2]]) # left
+            else:
+                # based on CRSI design guide. If overhang exceeds b/2 + d, treat as interior condition
+                if self.overhang_y > b/2 + d:
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                else:
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+self.overhang_y])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   h/2+self.overhang_y])
+        
+        
+        elif self.condition == "S":
+            self.slabedge_pts.append([[-b/2-L-3*b, -h/2-self.overhang_y]   ,    [b/2+L+3*b, -h/2-self.overhang_y]])
+            if self.has_studrail:
+                self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])
+                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])
+                self.perimeter_pts.append([-b/2-L-d/2   ,   -h/2-self.overhang_y])
+
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) # top
+                self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) # top
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) # right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) # right
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2-L, h/2]]) # left
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2-L, -h/2]]) # left
+            else:
+                # based on CRSI design guide. If overhang exceeds b/2 + d, treat as interior condition
+                if self.overhang_y > b/2 + d:
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                else:
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-self.overhang_y])
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   h/2+d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-self.overhang_y])
+        
+        
+        elif self.condition == "W":
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-L-h*3]   ,    [-b/2-self.overhang_x, h/2+L+h*3]])
+            if self.has_studrail:
+                self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])
+                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+L+d/2])
+
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) # top
+                self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) # top
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) # bot
+                self.studrail_pts.append([[b/2, -h/2]   ,    [b/2, -h/2-L]]) # bot
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) # right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) # right
+            else:
+                # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
+                if self.overhang_x > h/2 + d:
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                else:
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+d/2])
+        
+        
+        elif self.condition == "E":
+            self.slabedge_pts.append([[b/2+self.overhang_x, -h/2-L-h*3]   ,    [b/2+self.overhang_x, h/2+L+h*3]])
+            if self.has_studrail:
+                self.perimeter_pts.append([b/2+self.overhang_x   ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2]) #6
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])   #7
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
+                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-L-d/2])
+
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
+                self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) #top
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[b/2, -h/2]   ,    [b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2-L, h/2]]) #left
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2-L, -h/2]]) #left
+            else:
+                # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
+                if self.overhang_x > h/2 + d:
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   h/2+d/2])
+                else:
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-d/2])
+        
+        
+        elif self.condition == "I":
+            if self.has_studrail:
+                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2]) #2
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])   #3
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
+                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2]) #5
+                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2]) #6
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])   #7
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
+                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
+                self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) #top
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[b/2, -h/2]   ,    [b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) #right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) #right
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2-L, h/2]]) #left
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2-L, -h/2]]) #left
+            else:
+                self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+            
+        elif self.condition == "NW":
+            self.slabedge_pts.append([[-b/2-self.overhang_x, h/2+self.overhang_y]   ,  [b/2+L+3*b, h/2+self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, h/2+self.overhang_y]   ,  [-b/2-self.overhang_x, -h/2-L-3*h]])
+            if self.has_studrail:
+                self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2]) #2
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])   #3
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+self.overhang_y])
+
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[b/2, -h/2]   ,    [b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) #right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) #right
+            else:
+                # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
+                if (self.overhang_x > h/2 + d) and (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                elif (self.overhang_x > h/2 + d):
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+self.overhang_y])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+self.overhang_y])
+                elif (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+d/2])
+                else:
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2                ,    -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2                ,     h/2+self.overhang_y])
+        
+        
+        elif self.condition == "NE":
+            self.slabedge_pts.append([[b/2+self.overhang_x, h/2+self.overhang_y]   ,  [-b/2-L-3*b, h/2+self.overhang_y]])
+            self.slabedge_pts.append([[b/2+self.overhang_x, h/2+self.overhang_y]   ,  [b/2+self.overhang_x, -h/2-L-3*h]])
+            if self.has_studrail:
+                self.perimeter_pts.append([-b/2-L-d/2   ,    h/2+self.overhang_y])
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
+                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-L-d/2])
+
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[b/2, -h/2]   ,    [b/2, -h/2-L]]) #bot
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2-L, h/2]]) #left
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2-L, -h/2]]) #left
+            else:
+                # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
+                if (self.overhang_x > h/2 + d) and (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                elif (self.overhang_x > h/2 + d):
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+self.overhang_y])
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+self.overhang_y])
+                elif (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,   h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-d/2])
+                else:
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+self.overhang_y])
+                    self.perimeter_pts.append([-b/2-d/2   ,    -h/2-d/2])
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-d/2])
+        
+        
+        elif self.condition == "SW":
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [b/2+L+3*b, -h/2-self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [-b/2-self.overhang_x, h/2+L+3*h]])
+            if self.has_studrail:
+                self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
+                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2]) #5
+                self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+L+d/2])
+
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
+                self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) #top
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) #right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) #right
+            else:
+                # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
+                if (self.overhang_x > h/2 + d) and (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                elif (self.overhang_x > h/2 + d):
+                    self.perimeter_pts.append([b/2+d/2   ,     -h/2-self.overhang_y])
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2    ,   -h/2-self.overhang_y])
+                elif (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+d/2])
+                else:
+                    self.perimeter_pts.append([b/2+d/2   ,    -h/2-self.overhang_y])
+                    self.perimeter_pts.append([b/2+d/2                ,     h/2+d/2])
+                    self.perimeter_pts.append([-b/2-self.overhang_x     ,     h/2+d/2])
+        
+        
+        elif self.condition == "SE":
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [b/2+L+3*b, -h/2-self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [-b/2-self.overhang_x, h/2+L+3*h]])
+            if self.has_studrail:
+                self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
+                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2]) #5
+                self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+L+d/2])
+
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
+                self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) #top
+                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) #right
+                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) #right
+            else:
+                # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
+                if (self.overhang_x > h/2 + d) and (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                elif (self.overhang_x > h/2 + d):
+                    self.perimeter_pts.append([b/2+d/2   ,     -h/2-self.overhang_y])
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2    ,   -h/2-self.overhang_y])
+                elif (self.overhang_y > b/2 + d):
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,   -h/2-d/2])
+                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
+                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
+                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+d/2])
+                else:
+                    self.perimeter_pts.append([b/2+d/2   ,    -h/2-self.overhang_y])
+                    self.perimeter_pts.append([b/2+d/2                ,     h/2+d/2])
+                    self.perimeter_pts.append([-b/2-self.overhang_x     ,     h/2+d/2])
+        
+        
+        else:
+            raise RuntimeError('ERROR: condition must be one of "N", "S", "W", "E", "I", "NW", "NE", "SW", "SE"')
+        
+        # draw perimeter
+        for i in range(len(self.perimeter_pts)-1):
+            pt1 = self.perimeter_pts[i]
+            pt2 = self.perimeter_pts[i+1]
+            self.add_perimeter(pt1, pt2, self.slab_depth)
+        
+        
+        
+        
+    
+    def add_opening(self):
+        pass
+    
+    def rotate(self):
+        pass
+    
+    def update_properties(self):
+        """
+        Calculate geometric properties of the punching shear section. This is a private method called by solve() or preview().
+        """
+        # calculate widths and depths
+        all_x = self.perimeter["x_centroid"] + self.perimeter["x_start"] + self.perimeter["x_end"]
+        all_y = self.perimeter["y_centroid"] + self.perimeter["y_start"] + self.perimeter["y_end"]
+        
+        # centroid
+        xA = sum([x*A for x,A in zip(self.perimeter["x_centroid"],self.perimeter["area"])])
+        yA = sum([y*A for y,A in zip(self.perimeter["y_centroid"],self.perimeter["area"])])
+        self.A = sum(self.perimeter["area"])
+        self.x_centroid = xA / self.A
+        self.y_centroid = yA / self.A
+        
+        # moment of inertia
+        self.Ix = sum([ A * (y - self.y_centroid)**2 for y,A in zip(self.perimeter["y_centroid"],self.perimeter["area"]) ])
+        self.Iy = sum([ A * (x - self.x_centroid)**2 for x,A in zip(self.perimeter["x_centroid"],self.perimeter["area"]) ])
+        self.Ixy = sum([ A * (y - self.y_centroid) * (x - self.x_centroid) for x,y,A in zip(self.perimeter["x_centroid"],self.perimeter["y_centroid"],self.perimeter["area"]) ])
+        self.Iz = self.Ix + self.Iy
+        
+        # section modulus
+        self.Sx1 = self.Ix / abs(max(all_y) - self.y_centroid)
+        self.Sx2 = self.Ix / abs(min(all_y) - self.y_centroid)
+        self.Sy1 = self.Iy / abs(max(all_x) - self.x_centroid)
+        self.Sy2 = self.Iy / abs(min(all_x) - self.x_centroid)
+        
+        # principal axes via Mohr's circle
+        if self.Ix == self.Iy:
+            self.theta_p = 0
+        else:
+            self.theta_p = (  math.atan((self.Ixy)/((self.Ix-self.Iy)/2)) / 2) * 180 / math.pi
+    
+    
+    def preview(self):
+        """
+        preview punching shear section.
+        """
+        # remove perimeter based on openings
+        
+        # update geometric property
+        self.update_properties()
+        
+        # rotate if theta_p is not zero
+        
+        
+        # initialize figure
+        fig, axs = plt.subplots(1,2, figsize=(11,8.5), gridspec_kw={"width_ratios":[2,3]})
+        
+        # plot column
+        b = self.width
+        h = self.height
+        pt1 = np.array([-b/2, -h/2])
+        pt2 = np.array([b/2, -h/2])
+        pt3 = np.array([b/2, h/2])
+        pt4 = np.array([-b/2, h/2])
+        vertices = [pt1, pt2, pt3, pt4, pt1]
+        axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="darkgrey",
+                                      alpha=0.8, edgecolor="black", zorder=1, lw=0.5))
+        
+        # plot studrails
+        if len(self.studrail_pts) != 0:
+            for i in range(len(self.studrail_pts)):
+                pt1 = self.studrail_pts[i][0]
+                pt2 = self.studrail_pts[i][1]
+                axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="darkblue", zorder=2, linestyle="-")
+        
+        
+        # plot slab edge
+        if len(self.slabedge_pts) != 0:
+            for i in range(len(self.slabedge_pts)):
+                pt1 = self.slabedge_pts[i][0]
+                pt2 = self.slabedge_pts[i][1]
+                axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="black", zorder=2, linestyle="-")
+        
+        
+        # plot opening
+        
+        # plot x-y principal axes
+        
+        # plot Cog
+        axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="red",markersize=8,zorder=2, linestyle="none")
+        
+        # plot perimeter mesh with polygon patches
+        DEFAULT_THICKNESS = 0.5  # for display
+        t_min = min(self.perimeter["depth"])
+        line_thicknesses = [t/t_min * DEFAULT_THICKNESS for t in self.perimeter["depth"]]
+        
+        for i in range(len(self.perimeter["x_start"])):
+            x0 = self.perimeter["x_start"][i]
+            x1 = self.perimeter["x_end"][i]
+            y0 = self.perimeter["y_start"][i]
+            y1 = self.perimeter["y_end"][i]
+            xc = self.perimeter["x_centroid"][i]
+            yc = self.perimeter["y_centroid"][i]
+            
+            # calculate perpendicular direction vector to offset by thickness
+            u = np.array([x1,y1]) - np.array([x0,y0])
+            u_unit = u / np.linalg.norm(u)
+            v_unit = np.array([u_unit[1], -u_unit[0]])
+            
+            # plot using polygon patches
+            pt1 = np.array([x0, y0]) + v_unit * line_thicknesses[i]
+            pt2 = np.array([x0, y0]) - v_unit * line_thicknesses[i]
+            pt3 = np.array([x1, y1]) - v_unit * line_thicknesses[i]
+            pt4 = np.array([x1, y1]) + v_unit * line_thicknesses[i]
+            vertices = [pt1, pt2, pt3, pt4, pt1]
+            axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="darkgrey",
+                                          alpha=0.8, edgecolor="darkgreen", zorder=1, lw=0.5))
+            
+        
+
+        # # annotation for weld properties
+        # xo = 0.22
+        # yo = 0.85
+        # dy = 0.045
+        # unit = "in"
+        # axs[0].annotate("Weld Group Properties", 
+        #                 (xo-0.03,yo), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$x_{{cg}} = {:.2f} \quad {}$".format(self.x_centroid_force, unit), 
+        #                 (xo,yo-dy*1), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$y_{{cg}} = {:.2f} \quad {}$".format(self.y_centroid_force, unit), 
+        #                 (xo,yo-dy*2), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$L = {:.2f} \quad {}$".format(self.L_force, unit), 
+        #                 (xo,yo-dy*3), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$L_{{effective}} = {:.2f} \quad {}$".format(self.Le_force, unit), 
+        #                 (xo,yo-dy*4), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$I_x = {:.2f} \quad {}^3$".format(self.Ix_force, unit), 
+        #                 (xo,yo-dy*5), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$I_y = {:.2f} \quad {}^3$".format(self.Iy_force, unit), 
+        #                 (xo,yo-dy*6), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$I_z = {:.2f} \quad {}^3$".format(self.Iz_force, unit), 
+        #                 (xo,yo-dy*7), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$S_{{x,top}} = {:.2f} \quad {}^2$".format(self.Sx1_force, unit), 
+        #                 (xo,yo-dy*8), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$S_{{x,bottom}} = {:.2f} \quad {}^2$".format(self.Sx2_force, unit), 
+        #                 (xo,yo-dy*9), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$S_{{y,right}} = {:.2f} \quad {}^2$".format(self.Sy1_force, unit), 
+        #                 (xo,yo-dy*10), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$S_{{y,left}} = {:.2f} \quad {}^2$".format(self.Sy2_force, unit), 
+        #                 (xo,yo-dy*11), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$I_{{xy}} = {:.2f} \quad {}^3$".format(self.Ixy_force, unit), 
+        #                 (xo,yo-dy*12), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        # axs[0].annotate(r"$\theta_{{p}} = {:.2f} \quad deg$".format(self.theta_p_force), 
+        #                 (xo,yo-dy*13), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+
+        # styling
+        axs[1].set_aspect('equal', 'datalim')
+        fig.suptitle("Punching Shear Perimeter", fontweight="bold", fontsize=16)
+        axs[1].set_axisbelow(True)
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        plt.tight_layout()
+    
+
+    
+    def solve(self):
+        pass
+    
+    def check_equilibrium(self):
+        pass
+    
+    def plot_results(self):
+        pass
+    
+    def preview_3D(self):
+        pass
+    
+    def plot_results_3D(self):
+        pass
+
+
+
+
+
+
+
+
 
 
 class WeldGroup:

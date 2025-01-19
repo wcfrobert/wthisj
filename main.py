@@ -1,20 +1,28 @@
-import ezweld
+import wthisj
 
-# initialize a weld group
-weld_group = ezweld.WeldGroup()
 
-# draw welds
-weld_group.add_line(start=(0,0), end=(0,10), thickness=5/16)
-weld_group.add_line(start=(5,0), end=(5,10), thickness=5/16)
+# initialize a punching shear perimeter
+column1 = wthisj.PunchingShearSection(width = 24,
+                                      height = 24,
+                                      slab_depth = 12,
+                                      condition = "SW",
+                                      overhang_x = 16,
+                                      overhang_y = 16,
+                                      L_studrail = 24)
 
-# preview geometry
-weld_group.preview()
+# automatically generate critical perimeter 
+column1.auto_generate_perimeters()
 
-# calculate weld stress (k/in) with elastic method
-results = weld_group.solve(Vx=0, Vy=-50, Vz=0, Mx=200, My=0, Mz=0)
+# # add openings
+# column1.add_opening(dx=60, dy=60, width=36, height=12)
 
-# plot results
-weld_group.plot_results()
+# # preview geometry
+column1.preview()
+# column1.preview_3D()
 
-# plot results in 3D
-weld_group.plot_results_3D()
+# # calculate punching shear stress
+# results = column1.solve(P = 100, Mx = 0, My = 0)
+
+# # plot results
+# column1.plot_results()
+# column1.plot_results_3D()
