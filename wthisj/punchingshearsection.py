@@ -33,7 +33,6 @@ class PunchingShearSection:
         auto_generate_perimeters()
         add_perimeter()
         add_opening()
-        rotate()
         preview()
         preview_3D()
         solve()
@@ -55,6 +54,10 @@ class PunchingShearSection:
         self.perimeter_pts = []                                         # list of pts to generate perimeter
         self.studrail_pts = []                                          # list of pts to plot studrails
         self.slabedge_pts = []                                          # list of pts to plot slab edge
+        
+        # openings
+        self.openings = []                                              # list of openings, each opening is a list of 4 pts
+        self.openings_draw_pts = []                                     # list of pts in each opening corresponding to theta_min and max. For plotting
         
         # applied force
         self.P = None                                   # applied axial force (+ve is downward in gravity direction)
@@ -90,7 +93,6 @@ class PunchingShearSection:
                            "v_Mx": [],                  # shear stress from moment about X
                            "v_My": [],                  # shear stress from moment about Y
                            "v_total": [],               # total shear stress is the summation of the above three components. (not always additive)
-                           
                            "Fz":[],                     # used to verify equilibrium sum_Fz = 0
                            "Mxi":[],                    # used to verify equilibrium sum_Mx = 0
                            "Myi":[],                    # used to verify equilibrium sum_My = 0
@@ -154,8 +156,9 @@ class PunchingShearSection:
         L = self.L_studrail
         
         # switch-case for all 9 conditions
+        SLAB_EXTENT_FACTOR = 4
         if self.condition == "N":
-            self.slabedge_pts.append([[-b/2-L-3*b, h/2+self.overhang_y]   ,    [b/2+L+3*b, h/2+self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-L-SLAB_EXTENT_FACTOR*b, h/2+self.overhang_y]   ,    [b/2+L+SLAB_EXTENT_FACTOR*b, h/2+self.overhang_y]])
             if self.has_studrail:
                 self.perimeter_pts.append([-b/2-L-d/2   ,   h/2+self.overhang_y])
                 self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])
@@ -186,7 +189,7 @@ class PunchingShearSection:
         
         
         elif self.condition == "S":
-            self.slabedge_pts.append([[-b/2-L-3*b, -h/2-self.overhang_y]   ,    [b/2+L+3*b, -h/2-self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-L-SLAB_EXTENT_FACTOR*b, -h/2-self.overhang_y]   ,    [b/2+L+SLAB_EXTENT_FACTOR*b, -h/2-self.overhang_y]])
             if self.has_studrail:
                 self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
                 self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])
@@ -305,9 +308,10 @@ class PunchingShearSection:
                 self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
                 self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
             
+            
         elif self.condition == "NW":
-            self.slabedge_pts.append([[-b/2-self.overhang_x, h/2+self.overhang_y]   ,  [b/2+L+3*b, h/2+self.overhang_y]])
-            self.slabedge_pts.append([[-b/2-self.overhang_x, h/2+self.overhang_y]   ,  [-b/2-self.overhang_x, -h/2-L-3*h]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, h/2+self.overhang_y]   ,  [b/2+L+SLAB_EXTENT_FACTOR*b, h/2+self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, h/2+self.overhang_y]   ,  [-b/2-self.overhang_x, -h/2-L-SLAB_EXTENT_FACTOR*h]])
             if self.has_studrail:
                 self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-L-d/2])
                 self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2]) #2
@@ -343,8 +347,8 @@ class PunchingShearSection:
         
         
         elif self.condition == "NE":
-            self.slabedge_pts.append([[b/2+self.overhang_x, h/2+self.overhang_y]   ,  [-b/2-L-3*b, h/2+self.overhang_y]])
-            self.slabedge_pts.append([[b/2+self.overhang_x, h/2+self.overhang_y]   ,  [b/2+self.overhang_x, -h/2-L-3*h]])
+            self.slabedge_pts.append([[b/2+self.overhang_x, h/2+self.overhang_y]   ,  [-b/2-L-SLAB_EXTENT_FACTOR*b, h/2+self.overhang_y]])
+            self.slabedge_pts.append([[b/2+self.overhang_x, h/2+self.overhang_y]   ,  [b/2+self.overhang_x, -h/2-L-SLAB_EXTENT_FACTOR*h]])
             if self.has_studrail:
                 self.perimeter_pts.append([-b/2-L-d/2   ,    h/2+self.overhang_y])
                 self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
@@ -380,8 +384,8 @@ class PunchingShearSection:
         
         
         elif self.condition == "SW":
-            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [b/2+L+3*b, -h/2-self.overhang_y]])
-            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [-b/2-self.overhang_x, h/2+L+3*h]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [b/2+L+SLAB_EXTENT_FACTOR*b, -h/2-self.overhang_y]])
+            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [-b/2-self.overhang_x, h/2+L+SLAB_EXTENT_FACTOR*h]])
             if self.has_studrail:
                 self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
                 self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
@@ -417,18 +421,18 @@ class PunchingShearSection:
         
         
         elif self.condition == "SE":
-            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [b/2+L+3*b, -h/2-self.overhang_y]])
-            self.slabedge_pts.append([[-b/2-self.overhang_x, -h/2-self.overhang_y]   ,  [-b/2-self.overhang_x, h/2+L+3*h]])
+            self.slabedge_pts.append([[b/2+self.overhang_x, -h/2-self.overhang_y]   ,  [-b/2-L-SLAB_EXTENT_FACTOR*b, -h/2-self.overhang_y]])
+            self.slabedge_pts.append([[b/2+self.overhang_x, -h/2-self.overhang_y]   ,  [b/2+self.overhang_x, h/2+L+SLAB_EXTENT_FACTOR*h]])
             if self.has_studrail:
-                self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
-                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
-                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2]) #5
-                self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+L+d/2])
+                self.perimeter_pts.append([b/2+self.overhang_x   ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2]) #6
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])   #7
+                self.perimeter_pts.append([-b/2-L-d/2   ,    -h/2-self.overhang_y])
 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
                 self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) #top
-                self.studrail_pts.append([[b/2, h/2]   ,    [b/2+L, h/2]]) #right
-                self.studrail_pts.append([[b/2, -h/2]  ,    [b/2+L, -h/2]]) #right
+                self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2-L, h/2]]) #left
+                self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2-L, -h/2]]) #left
             else:
                 # based on CRSI design guide. If overhang exceeds h/2 + d, treat as interior condition
                 if (self.overhang_x > h/2 + d) and (self.overhang_y > b/2 + d):
@@ -443,14 +447,14 @@ class PunchingShearSection:
                     self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
                     self.perimeter_pts.append([-b/2-d/2    ,   -h/2-self.overhang_y])
                 elif (self.overhang_y > b/2 + d):
-                    self.perimeter_pts.append([-b/2-self.overhang_x   ,   -h/2-d/2])
-                    self.perimeter_pts.append([b/2+d/2    ,   -h/2-d/2]) #2
-                    self.perimeter_pts.append([b/2+d/2    ,    h/2+d/2]) #3
-                    self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+d/2])
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,   h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2]) #4
+                    self.perimeter_pts.append([-b/2-d/2   ,   -h/2-d/2]) #1
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-d/2])
                 else:
-                    self.perimeter_pts.append([b/2+d/2   ,    -h/2-self.overhang_y])
-                    self.perimeter_pts.append([b/2+d/2                ,     h/2+d/2])
-                    self.perimeter_pts.append([-b/2-self.overhang_x     ,     h/2+d/2])
+                    self.perimeter_pts.append([b/2+self.overhang_x   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2   ,    h/2+d/2])
+                    self.perimeter_pts.append([-b/2-d/2     ,     -h/2-self.overhang_y])
         
         
         else:
@@ -463,14 +467,80 @@ class PunchingShearSection:
             self.add_perimeter(pt1, pt2, self.slab_depth)
         
         
+    def add_opening(self, dx, dy, width, height):
+        """
+        Add an opening nearby. Affected perimeter will automatically be removed.
         
+        Arguments:
+            dx              float:: x-offset from column center (0,0) to bottom left corner of opening
+            dy              float:: y-offset from column center (0,0) to bottom left corner of opening
+            width           float:: opening width
+            height          float:: opening height
+            
+        Returns:
+            None
+        """
+        # list of points
+        col_pts = [[-self.width/2-self.slab_depth/2-self.L_studrail  , -self.height/2-self.slab_depth/2-self.L_studrail],
+                   [self.width/2+self.slab_depth/2+self.L_studrail   , -self.height/2-self.slab_depth/2-self.L_studrail],
+                   [self.width/2+self.slab_depth/2+self.L_studrail   , self.height/2+self.slab_depth/2+self.L_studrail],
+                   [-self.width/2-self.slab_depth/2-self.L_studrail  , self.height/2+self.slab_depth/2+self.L_studrail]]
+        opening_pts = [[dx, dy],
+                       [dx+width, dy],
+                       [dx+width, dy+height],
+                       [dx, dy+height]]
+        self.openings.append(opening_pts)
         
+        # ACI recommends opening more than 4h away need not be considered. Allow user to add opening but provide warning.
+        h = (self.slab_depth + 2) # assume 2" cover
+        min_length = math.inf
+        for i in range(len(col_pts)):
+            for j in range(len(opening_pts)):
+                pt1 = col_pts[i]
+                pt2 = opening_pts[j]
+                length = math.sqrt((pt1[0] - pt2[0])**2 + (pt1[1] - pt2[1])**2)
+                if length < min_length:
+                    min_length = length
+        if min_length > 4*h:
+            print("Opening is more than 4h away from column perimeter and may be ignored per ACI 318")
     
-    def add_opening(self):
-        pass
+        # to determine which portion of perimeter to remove. Convert to radial coordinate and calculate acceptable theta range
+        thetas = []
+        for pt in opening_pts:
+            thetas.append(math.atan2(pt[1], pt[0])) # returns within -pi to +pi rad
+        theta_min = min(thetas)
+        theta_max = max(thetas)
+        min_idx = thetas.index(theta_min)
+        max_idx = thetas.index(theta_max)
+        self.openings_draw_pts.append([opening_pts[min_idx],
+                                       opening_pts[max_idx]])
+        
+        # delete perimeter patches within theta range
+        delete_idx = []
+        for i in range(len(self.perimeter["x_centroid"])):
+            x = self.perimeter["x_centroid"][i]
+            y = self.perimeter["y_centroid"][i]
+            theta = math.atan2(y, x)
+            if theta_min < theta and theta < theta_max:
+                delete_idx.append(i)
+        
+        # delete from largest index first to prevent shifting
+        delete_idx.reverse()
+        for idx in delete_idx:
+            del self.perimeter["x_centroid"][idx]
+            del self.perimeter["y_centroid"][idx]
+            del self.perimeter["x_start"][idx]
+            del self.perimeter["y_start"][idx]
+            del self.perimeter["x_end"][idx]
+            del self.perimeter["y_end"][idx]
+            del self.perimeter["depth"][idx]
+            del self.perimeter["length"][idx]
+            del self.perimeter["area"][idx]
+    
     
     def rotate(self):
         pass
+    
     
     def update_properties(self):
         """
@@ -506,12 +576,11 @@ class PunchingShearSection:
             self.theta_p = (  math.atan((self.Ixy)/((self.Ix-self.Iy)/2)) / 2) * 180 / math.pi
     
     
+    
     def preview(self):
         """
         preview punching shear section.
         """
-        # remove perimeter based on openings
-        
         # update geometric property
         self.update_properties()
         
@@ -530,43 +599,84 @@ class PunchingShearSection:
         pt4 = np.array([-b/2, h/2])
         vertices = [pt1, pt2, pt3, pt4, pt1]
         axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="darkgrey",
-                                      alpha=0.8, edgecolor="black", zorder=1, lw=0.5))
+                                      alpha=0.8, edgecolor="black", zorder=1, lw=1.5))
         
         # plot studrails
         if len(self.studrail_pts) != 0:
             for i in range(len(self.studrail_pts)):
                 pt1 = self.studrail_pts[i][0]
                 pt2 = self.studrail_pts[i][1]
-                axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="darkblue", zorder=2, linestyle="-")
-        
-        
-        # plot slab edge
-        if len(self.slabedge_pts) != 0:
-            for i in range(len(self.slabedge_pts)):
-                pt1 = self.slabedge_pts[i][0]
-                pt2 = self.slabedge_pts[i][1]
                 axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="black", zorder=2, linestyle="-")
         
         
+        # plot slab edge
+        if self.condition == "I":
+            axs[1].set_facecolor((0.77, 0.77, 0.77, 0.45))
+        else:
+            if len(self.slabedge_pts) != 0:
+                for i in range(len(self.slabedge_pts)):
+                    pt1 = self.slabedge_pts[i][0]
+                    pt2 = self.slabedge_pts[i][1]
+                    axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="black", zorder=2, linestyle="-")
+        
+        
         # plot opening
+        if len(self.openings) != 0:
+            for i in range(len(self.openings)):
+                pt1 = np.array(self.openings[i][0])
+                pt2 = np.array(self.openings[i][1])
+                pt3 = np.array(self.openings[i][2])
+                pt4 = np.array(self.openings[i][3])
+                vertices = [pt1, pt2, pt3, pt4, pt1]
+                axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="white",
+                                              alpha=1, edgecolor="darkred", zorder=3, lw=2))
+                axs[1].plot([pt1[0], pt3[0]], [pt1[1], pt3[1]], marker="none", c="darkred", zorder=3, linestyle="-")
+                axs[1].plot([pt2[0], pt4[0]], [pt2[1], pt4[1]], marker="none", c="darkred", zorder=3, linestyle="-")
+                axs[1].plot([0,self.openings_draw_pts[i][0][0]], 
+                            [0,self.openings_draw_pts[i][0][1]], 
+                            marker="none", c="darkred", zorder=3, linestyle="--")
+                axs[1].plot([0,self.openings_draw_pts[i][1][0]], 
+                            [0,self.openings_draw_pts[i][1][1]], 
+                            marker="none", c="darkred", zorder=3, linestyle="--")
         
         # plot x-y principal axes
+        ordinate = 0.4*max(self.width, self.height)
+        axs[1].annotate("",
+                        xy=(self.x_centroid+ordinate, self.y_centroid), 
+                        xytext=(self.x_centroid, self.y_centroid),
+                        color="black",
+                        arrowprops=dict(arrowstyle="simple,head_length=0.6,head_width=0.45,tail_width=0.06",
+                                            fc="black", ec="black"))
+        axs[1].annotate("",
+                        xy=(self.x_centroid, self.y_centroid+ordinate), 
+                        xytext=(self.x_centroid, self.y_centroid),
+                        color="black",
+                        arrowprops=dict(arrowstyle="simple,head_length=0.6,head_width=0.45,tail_width=0.06",
+                                            fc="black", ec="black"))
+        axs[1].annotate("X'",
+                        xy=(self.x_centroid, self.y_centroid), 
+                        xytext=(self.x_centroid+ordinate, self.y_centroid),
+                        va="center",
+                        color="black")
+        axs[1].annotate("Y'",
+                        xy=(self.x_centroid, self.y_centroid), 
+                        xytext=(self.x_centroid, self.y_centroid+ordinate),
+                        ha="center",
+                        color="black")
         
         # plot Cog
-        axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="red",markersize=8,zorder=2, linestyle="none")
+        axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="darkblue",markersize=8, zorder=3, linestyle="none")
+        
         
         # plot perimeter mesh with polygon patches
-        DEFAULT_THICKNESS = 0.5  # for display
+        DEFAULT_THICKNESS = 1  # for display
         t_min = min(self.perimeter["depth"])
         line_thicknesses = [t/t_min * DEFAULT_THICKNESS for t in self.perimeter["depth"]]
-        
         for i in range(len(self.perimeter["x_start"])):
             x0 = self.perimeter["x_start"][i]
             x1 = self.perimeter["x_end"][i]
             y0 = self.perimeter["y_start"][i]
             y1 = self.perimeter["y_end"][i]
-            xc = self.perimeter["x_centroid"][i]
-            yc = self.perimeter["y_centroid"][i]
             
             # calculate perpendicular direction vector to offset by thickness
             u = np.array([x1,y1]) - np.array([x0,y0])
@@ -579,8 +689,8 @@ class PunchingShearSection:
             pt3 = np.array([x1, y1]) - v_unit * line_thicknesses[i]
             pt4 = np.array([x1, y1]) + v_unit * line_thicknesses[i]
             vertices = [pt1, pt2, pt3, pt4, pt1]
-            axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="darkgrey",
-                                          alpha=0.8, edgecolor="darkgreen", zorder=1, lw=0.5))
+            axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="blue",
+                                          alpha=0.4, edgecolor="darkblue", zorder=1, lw=0.5))
             
         
 
@@ -624,6 +734,7 @@ class PunchingShearSection:
         axs[1].set_axisbelow(True)
         axs[0].set_xticks([])
         axs[0].set_yticks([])
+        axs[1].grid(linestyle='--')
         plt.tight_layout()
     
 
