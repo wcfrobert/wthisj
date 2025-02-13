@@ -1,32 +1,22 @@
 import wthisj
 
-# initialize a column perimeter
+# initialize a column perimeter - corner condition with studrails
 column1 = wthisj.PunchingShearSection(width = 24,
                                       height = 24,
                                       slab_depth = 12,
-                                      condition = "I",
-                                      overhang_x=4)
+                                      condition = "NW",
+                                      overhang_x = 12,
+                                      overhang_y = 12,
+                                      L_studrail = 36)
 # preview geometry
 column1.preview()
 
 # calculate punching shear stress
-results = column1.solve(P = 100, 
-                        Mx = 500, 
-                        My = 90, 
-                        gamma_v = 0.4)
+results = column1.solve(P = 100, Mx = 500, My = 90)
 
+# generate 2D plot with matplotlib
+column1.plot_results()
 
-
-
-
-
-
-
-# # plot results
-# column1.plot_results()
-
-# column1.preview_3D()
+# generate interactive 3D plot with plotly
 column1.plot_results_3D()
-
-
 

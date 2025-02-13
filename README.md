@@ -29,9 +29,41 @@
 Run main.py:
 
 ```python
+import wthisj
 
+# initialize a column perimeter - corner condition with studrails
+column1 = wthisj.PunchingShearSection(width = 24,
+                                      height = 24,
+                                      slab_depth = 12,
+                                      condition = "NW",
+                                      overhang_x = 12,
+                                      overhang_y = 12,
+                                      L_studrail = 36)
+# preview geometry
+column1.preview()
 
+# calculate punching shear stress
+results = column1.solve(P = 100, Mx = 500, My = 90)
+
+# generate 2D plot with matplotlib
+column1.plot_results()
+
+# generate interactive 3D plot with plotly
+column1.plot_results_3D()
 ```
+
+`PunchingShearSection.preview()`
+
+`PunchingShearSection.solve()`
+
+`PunchingShearSection.plot_results()`
+
+`PunchingShearSection.plot_results_3D()`
+
+
+
+
+
 
 
 
@@ -87,8 +119,31 @@ pip install wthisj
 ```
 
 
-
 ## Usage
+
+Here are all the public methods available to the user:
+
+**Defining a Punching Shear Perimeter**
+
+- `PunchingShearSection.preview()`
+- `PunchingShearSection.add_perimeter()`
+- `PunchingShearSection.add_opening()`
+- `PunchingShearSection.rotate()`
+
+
+
+**Run Analysis**
+
+- `PunchingShearSection.solve()`
+
+
+
+
+**Plotting Results**
+
+- `PunchingShearSection.preview()`
+- `PunchingShearSection.plot_results()`
+- `PunchingShearSection.plot_results_3D()`
 
 
 
@@ -97,9 +152,13 @@ pip install wthisj
 ## Theoretical Background
 
 
+TODO
+
+
 
 ## Assumptions and Limitations
 
+TODO
 
 
 
