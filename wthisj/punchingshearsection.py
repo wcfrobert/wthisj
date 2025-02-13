@@ -13,36 +13,51 @@ pio.renderers.default = "browser"
 
 class PunchingShearSection:
     """
-    PunchingShear Section objects are numerical representation of a critical punching 
-    shear perimeter around a column in a concrete slab.
+    PunchingShearSection objects are numerical representation of a critical punching 
+    shear perimeter around a column in a concrete flat slab floor system.
     
-    Input Args:
-        width                       float:: Column support dimension along x
-        height                      float:: Column support dimension along y
-        slab_depth                  float:: Slab depth from outermost compression fiber to outer-most tension rebar (average of two directions)
-        condition                   str::   Specify interior, edge, or corner condition. 
-                                            For example, "SE" is a corner condition with slab edge below and to the right.
-                                            Valid input include.
-                                                "NW"   "N"   "NE"
-                                                 "W"   "I"   "E"
-                                                "SW"   "S"   "SE"                   
-        overhang_x                  (OPTIONAL) float:: slab overhang dimension along x beyond column face. Default = 0.
-        overhang_y                  (OPTIONAL) float:: slab overhang dimension along y beyond column face. Default = 0.
-        L_studrail                  (OPTIONAL) float:: stud rail length if applicable. default = 0.
-        auto_generate_perimeter     (OPTIONAL) bool:: auto-generate punching shear perimeter based on above input. Default = True.
-                                                        The user may wish to draw their own perimeter using the .add_perimeter() method.
+    Args:
+        width (float):
+            Column support dimension along x
+            
+        height (float):
+            Column support dimension along y
+            
+        slab_depth (float):
+            Slab depth from outermost compression fiber to outer-most tension rebar. 
+            Use the average depth of the two orthogonal slab directions.
+            
+        condition (str):
+            Specify interior, edge, or corner condition. Valid inputs include:
+                "NW"   "N"   "NE"
+                 "W"   "I"   "E"
+                "SW"   "S"   "SE"   
+            for example, "SE" is a corner condition with slab edge below and to the right.  
+            
+        (OPTIONAL) overhang_x = 0 (float):
+            Slab overhang dimension along x beyond column face. Default = 0.
+            
+        (OPTIONAL) overhang_y = 0 (float):
+            Slab overhang dimension along y beyond column face. Default = 0.
+            
+        (OPTIONAL) L_studrail = 0 (float):
+            Stud rail length if applicable. default = 0.
+            
+        (OPTIONAL) auto_generate_perimeter = True (bool):
+            Auto-generate punching shear perimeter based on the other inputs. Default = True.
+            Alternatively, the user may draw the perimeters manually using .add_perimeter().
     
     Public Methods:
         PunchingShearSection.add_perimeter()
         PunchingShearSection.add_opening()
         PunchingShearSection.rotate()
         PunchingShearSection.preview()
-        PunchingShearSection.preview_3D()
         PunchingShearSection.solve()
         PunchingShearSection.plot_results()
         PunchingShearSection.plot_results_3D()
     """
-    def __init__(self, width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True):
+    def __init__(self, width, height, slab_depth, condition, 
+                 overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True):
         # input arguments. See descriptions in docstring above.
         self.width = width
         self.height = height
@@ -55,12 +70,12 @@ class PunchingShearSection:
         
         # parameters related to column and slab geometry
         self.has_studrail = False if self.L_studrail==0 else True       # bool for if studrail exists
-        self.perimeter_pts = []                                         # list of pts to generate perimeter using auto_generate_perimeters()
-        self.studrail_pts = []                                          # list of pts to plot studrails
-        self.slabedge_lines = []                                        # list of lines to plot slab edge. Each line is two points
-        self.slabedge_pts = []                                          # list of pts to plot slab shading
-        self.openings = []                                              # list of openings, each opening is a list of 4 pts
-        self.openings_draw_pts = []                                     # list of pts in each opening used to draw theta_min and max dotted lines
+        self.perimeter_pts = []                         # list of pts to generate perimeter using auto_generate_perimeters()
+        self.studrail_pts = []                          # list of pts to plot studrails
+        self.slabedge_lines = []                        # list of lines to plot slab edge. Each line is two points
+        self.slabedge_pts = []                          # list of pts to plot slab shading
+        self.openings = []                              # list of openings, each opening is a list of 4 pts
+        self.openings_draw_pts = []                     # list of pts in each opening used to draw theta_min and max dotted lines
         self.col_pts = [np.array([-self.width/2, -self.height/2]),      # list of pts to plot column
                         np.array([self.width/2, -self.height/2]),
                         np.array([self.width/2, self.height/2]),
@@ -70,13 +85,12 @@ class PunchingShearSection:
         self.x_centroid = None                          # centroid x
         self.y_centroid = None                          # centroid y
         self.L = None                                   # total perimeter length
-        self.Le = None                                  # total perimeter length (normalized by slab depth)
         self.A = None                                   # total area of welds
         self.Ix = None                                  # moment of inertia X
         self.Iy = None                                  # moment of inertia Y
         self.Iz = None                                  # polar moment of inertia = Ix + Iy
         self.Ixy = None                                 # product moment of inertia
-        self.theta_p = None                             # angle offset to principal axis
+        self.theta_p = None                             # angle offset to principal axis in degrees
         self.Sx1 = None                                 # elastic modulus top fiber
         self.Sx2 = None                                 # elastic modulus bottom fiber
         self.Sy1 = None                                 # elastic modulus right fiber
@@ -86,11 +100,12 @@ class PunchingShearSection:
         self.P = None                                   # applied axial force (we will assume always downwards. Apply abs())
         self.Mx = None                                  # applied moment about X
         self.My = None                                  # applied moment about Y
-        self.adjust_eccentric_P = None                  # if user-specified P is at column centroid rather than shear perimeter centroid. Adjust for additional moment
-        self.Pex = None                                 # additional moment due to P * eccentricity between col centroid and perimeter centroid
-        self.Pey = None                                 # additional moment due to P * eccentricity between col centroid and perimeter centroid
-        self.Mx_total = None                            # final governing moment in x-direction (= Mx + Pey)
-        self.My_total = None                            # final governing moment in y-direction (= My + Pex)
+        self.Pex = None                                 # additional X moment due to eccentricity
+        self.Pey = None                                 # additional Y moment due to eccentricity
+        self.gamma_vx = None                            # percentage of X unbalanced moment transferred through eccentric shear
+        self.gamma_vy = None                            # percentage of Y unbalanced moment transferred through eccentric shear
+        self.Mx_final = None                            # final governing moment in x-direction = gamma_v*(Mx + Pey)
+        self.My_final = None                            # final governing moment in y-direction = gamma_v*(My + Pex)
         
         # dictionary storing perimeter information
         self.perimeter = {"x_centroid":[],              # x coordinate of centroid of patch
@@ -106,7 +121,7 @@ class PunchingShearSection:
                            "v_axial": [],               # shear stress from axial demand P
                            "v_Mx": [],                  # shear stress from moment about X
                            "v_My": [],                  # shear stress from moment about Y
-                           "v_total": [],               # total shear stress is the summation of the above three components. (not always additive)
+                           "v_total": [],               # total shear stress is the summation of the above three components
                            "Fz":[],                     # used to verify equilibrium sum_Fz = 0
                            "Mxi":[],                    # used to verify equilibrium sum_Mx = 0
                            "Myi":[],                    # used to verify equilibrium sum_My = 0
@@ -597,7 +612,15 @@ class PunchingShearSection:
     
     
     def rotate(self, angle):
-        """rotate all objects by a user-specified angle in DEGREES counter-clockwise"""
+        """
+        Rotate all objects by a user-specified angle.
+        
+        Args:
+            angle           float:: rotate geometry by a specified DEGREE measured counter clockwise from the +x axis.
+            
+        Returns:
+            None
+        """
         # rotation matrix
         rotation_rad = angle * math.pi / 180
         T = np.array([
@@ -692,16 +715,11 @@ class PunchingShearSection:
     
     def update_properties(self):
         """
-        Calculate geometric properties of the punching shear section. This is a private method called by solve() or preview() or rotate().
+        Calculate geometric properties of the shear section. 
+        This is a private method called by solve() or preview() or rotate().
         """
         # calculate total perimeter
         self.L = sum(self.perimeter["length"])
-        
-        # calculate effective perimeter (normalized by min slab depth)
-        d_min = min(self.perimeter["depth"])
-        modified_length = [d/d_min * L for d,L in zip(self.perimeter["depth"], self.perimeter["length"])]
-        self.perimeter["length_effective"] = modified_length
-        self.Le = sum(self.perimeter["length_effective"])
         
         # centroid
         xA = sum([x*A for x,A in zip(self.perimeter["x_centroid"],self.perimeter["area"])])
@@ -733,7 +751,7 @@ class PunchingShearSection:
     
     def preview(self):
         """
-        preview punching shear perimeter. Returns a matplotlib figure.
+        Preview punching shear perimeter. Returns a matplotlib figure.
         """
         # update geometric property
         self.update_properties()
@@ -857,7 +875,7 @@ class PunchingShearSection:
             
         # annotation for perimeter geometric properties
         xo = 0.12
-        yo = 0.90
+        yo = 0.95
         dy = 0.045
         unit = "in"
         axs[0].annotate("Centroid", 
@@ -869,34 +887,36 @@ class PunchingShearSection:
         
         axs[0].annotate("Moment of Inertias", 
                         (xo-0.03,yo-dy*3), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$J_x = {:,.0f} \quad {}^3$".format(self.Ix, unit), 
+        axs[0].annotate(r"$J_x = {:,.0f} \quad {}^4$".format(self.Ix, unit), 
                         (xo,yo-dy*4), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$J_y = {:,.0f} \quad {}^3$".format(self.Iy, unit), 
+        axs[0].annotate(r"$J_y = {:,.0f} \quad {}^4$".format(self.Iy, unit), 
                         (xo,yo-dy*5), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         
-        axs[0].annotate("Shear Perimeter", 
+        axs[0].annotate("Shear Perimeter/Area", 
                         (xo-0.03,yo-dy*6), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
         axs[0].annotate(r"$L = {:.1f} \quad {}$".format(self.L, unit), 
                         (xo,yo-dy*7), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$A = {:.1f} \quad {}^2$".format(self.A, unit), 
+                        (xo,yo-dy*8), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         
         axs[0].annotate("Section Modulus", 
-                        (xo-0.03,yo-dy*8), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$S_{{x,top}} = {:,.0f} \quad {}^2$".format(self.Sx1, unit), 
-                        (xo,yo-dy*9), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$S_{{x,bottom}} = {:,.0f} \quad {}^2$".format(self.Sx2, unit), 
+                        (xo-0.03,yo-dy*9), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$S_{{x,top}} = {:,.0f} \quad {}^3$".format(self.Sx1, unit), 
                         (xo,yo-dy*10), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$S_{{y,right}} = {:,.0f} \quad {}^2$".format(self.Sy1, unit), 
+        axs[0].annotate(r"$S_{{x,bottom}} = {:,.0f} \quad {}^3$".format(self.Sx2, unit), 
                         (xo,yo-dy*11), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$S_{{y,left}} = {:,.0f} \quad {}^2$".format(self.Sy2, unit), 
+        axs[0].annotate(r"$S_{{y,right}} = {:,.0f} \quad {}^3$".format(self.Sy1, unit), 
                         (xo,yo-dy*12), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$S_{{y,left}} = {:,.0f} \quad {}^3$".format(self.Sy2, unit), 
+                        (xo,yo-dy*13), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         
         axs[0].annotate("Principal Orientation Angle", 
-                        (xo-0.03,yo-dy*13), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
+                        (xo-0.03,yo-dy*14), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
         axs[0].annotate(r"$\theta_{{p}} = {:.1f} \quad deg$".format(self.theta_p), 
-                        (xo,yo-dy*14), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+                        (xo,yo-dy*15), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         if abs(self.theta_p) > 0.1:
             axs[0].annotate("WARNING: Not in principal orientation.", 
-                            (xo,yo-dy*15), color="darkred", xycoords='axes fraction', fontsize=12, va="top", ha="left", wrap=True)
+                            (xo-0.03,yo-dy*16), color="darkred", xycoords='axes fraction', fontsize=12, va="top", ha="left", wrap=True)
 
         # styling
         axs[1].set_aspect('equal', 'datalim')
@@ -908,32 +928,241 @@ class PunchingShearSection:
         plt.tight_layout()
     
 
-    def solve(self, P, Mx, My, gamma_v, auto_adjust_ecc=False):
+    def solve(self, P, Mx, My, gamma_vx="auto", gamma_vy="auto", include_Pe=True, auto_rotate=True):
         """
-        Run punching shear stress analysis.
+        Calculate shear stress at every point along the column perimeter.
         
-        Arguments:
-            P                   float:: applied shear force (Always positive. Always downwards in gravity direction)
-            Mx                  float:: applied moment about X-axis
-            My                  float:: applied moment about Y-axis
-            gamma_v             float:: percentage of applied unbalanced moment transferred via shear. Usually around 40%.
-                                        In ACI 318-19, gamma_v is calculated as:
-                                                b1 = column dimension parallel to span
-                                                b2 = column dimension perpendicular to span
-                                                gamma_f = 1 + (2/3)*sqrt(b1/b2)
-                                                gamma_v = 1 - 1 / gamma_f
-                                        ACI 421.1R-20 has more guidance for gamma_v for perimeters with studrails
-            auto_adjust_ecc     (OPTIONAL) bool:: modify moment based on eccentricity between column centroid and perimeter centroid. 
-            
-        Important note about auto_adjust_ecc and governing moment:
-            
+        Args:
+            P (float): 
+                Applied shear force in KIPS.
+                
+            Mx (float): 
+                Applied moment about the X-axis in KIP.IN.
+                
+            My (float): 
+                Applied moment about the Y-axis in KIP.IN.
+                
+            (OPTIONAL) gamma_vx = "auto" (str or float): 
+                Percentage of X moment transferred to the column via shear. By default,
+                this quantity is automatically calculated. Alternatively, the user may 
+                enter a specific value of gamma_v (e.g. 0.4)
+                
+            (OPTIONAL) gamma_vy = "auto" (str or float): 
+                Percentage of Y moment transferred to the column via shear. By default,
+                this quantity is automatically calculated. Alternatively, the user may 
+                enter a specific value of gamma_v (e.g. 0.4)
+                
+            (OPTIONAL) include_Pe = True (bool): 
+                Boolean to consider additional moment due to eccentricity between 
+                the column centroid and perimeter centroid. Defaults to True.
+                
+            (OPTIONAL) auto_rotate = True (bool): 
+                Boolean to rotate everything, including the applied moment automatically if the
+                geometry is not in the principal orientation. Defaults to True.
+                
         Returns:
-            df_perimeter        dataframe:: calculation summary table
+            df_perimeter (dataframe): 
+                Calculation summary table. Each row is a patch of the column perimeter.
+            
+            
+        Notes about applied moment:
+            The user-specified moment (Mx, My) goes through several rounds of adjustment and may
+            not be what the user expects. These rounds are explained more in-depth below.
+                1. Rotate moment vector to principal orientation is applicable
+                        (Mx', My')
+                2. Additional moment due to eccentricity between column centroid and perimeter centroid
+                        (Mx'+Pey , My'+Pex)
+                3. Only a fixed % of moment is transferred through shear (gamma_v)
+                        (gamma_v*(Mx'+Pey) , gamma_v*(My'+Pex))
+            
+        (1) Auto rotation to principal orientation:
+            The elastic method takes advantage of principle of superposition. In practice, this means
+            we can calculate stress due to P/A, then M/S in both directions, then add (superimpose) them
+            at the end. However, superposition is NOT valid for asymmetric sections not in its principal
+            orientation. This is described in detail in all mechanics of material textbooks. We know a
+            section is in its principal orientation if the product of inertia (Ixy) is equal to zero.
+            
+            For corner column conditions, the L-shaped perimeter is rotated 45 degrees - along with the
+            applied moment vector - to get to the principal orientation. The presence of opening can also 
+            make a perimeter non-principal (i.e. Ixy != 0).
+            
+            
+        (2) Additional moment due to Pe:
+            Most people obtain the applied shear (P) and unbalanced moment (Mx, My) using FEM software that
+            reports column reactions. The problem is the column centroid does NOT coincide with the perimeter
+            centroid in edge/corner conditions. I am not convinced anyone actually does this adjustment in practice,
+            but it is described in detail in ACI 421.1R-20.
+            
+        
+        (3) Notes about gamma_v:
+            Unbalanced moment within the slab is transferred to the supporting columns in two ways:
+                1. Flexure within a slab "transfer width" (GAMMA_F)
+                2. Eccentric shear (GAMMA_V)
+            GAMMA_F and GAMMA_V should add up to 100%. The second action is of particular interest 
+            because it pertains to shear stress. The user may wish to calculate specify a gamma_v value 
+            themselves. Alternatively, if gamma_v is set to "auto", the transfer ratio is calculated 
+            internally. For more information about how these are calculated, refer to ACI 318-19 and
+            ACI 421.1R-20.
+                Let:
+                    lx = max(xi) - min(xi)
+                    ly = max(yi) - min(yi)
+                
+                For the columns WITHOUT studrails (all conditions):
+                    gamma_vx = 1 - 1 / (1 + (2/3)*sqrt(ly/lx))
+                    gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly))
+                
+                For column WITH studrails:
+                    Interior condition (I)
+                        gamma_vx = 1 - 1 / (1 + (2/3)*sqrt(ly/lx))
+                        gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly))
+                        
+                    Edge condition (N, S)
+                        gamma_vx = 1 - 1 / (1 + (2/3)*sqrt(ly/lx - 0.2))
+                        gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly))
+                        
+                    Edge condition (W, E)
+                        gamma_vx = 1 - 1 / (1 + (2/3)*sqrt(ly/lx))
+                        gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly - 0.2))
+                    
+                    Corner conditions (NW, NE, SW, SE)
+                        gamma_vx = 0.4
+                        gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly - 0.2))
+                        Assuming moment vector Mx points at or away from the column, otherwise flip gamma_vx and gamma_vy
+                    
+                For custom-defined perimeters:
+                    User must provide gamma_v themselves. Program will terminate with a warning if none is provided.
         """
-        pass
+        # rotate geometry and applied moment if applicable
+        required_rotation = self.theta_p
+        if abs(required_rotation) > 0.1 and auto_rotate:
+            print("WARNING: Automatically rotating geometry to its principal orientation: {:.1f} deg".format(required_rotation))
+            self.rotate(required_rotation)
+            M_vec = np.array([Mx, My])
+            T = np.array([
+                [math.cos(required_rotation*math.pi/180), -math.sin(required_rotation*math.pi/180)],
+                [math.sin(required_rotation*math.pi/180), math.cos(required_rotation*math.pi/180)]
+                ])
+            M_vec_rotated = T @ M_vec
+            Mx = M_vec_rotated[0]
+            My = M_vec_rotated[1]
+        
+        # update geometric property again in case geometry rotated
+        self.update_properties()
+        
+        # calculate Pe moment if applicable
+        if include_Pe:
+            Pex = -P * self.x_centroid # there is a right-hand rule sign flip here
+            Pey = P * self.y_centroid
+        else:
+            Pex = 0
+            Pey = 0
+            
+        # calculate gamma_vx
+        did_not_auto_generate_perimeter = not self.generate_perimeter
+        did_not_specify_gamma_v = gamma_vx == "auto" or gamma_vy == "auto"
+        if did_not_auto_generate_perimeter and did_not_specify_gamma_v:
+            raise RuntimeError("WARNING: Custom perimeter detected. Cannot calculate gamma_v automatically. Please provide it")
+            
+        if gamma_vx == "auto":
+            lx = max([xi for xi in self.perimeter["x_centroid"]]) - min([xi for xi in self.perimeter["x_centroid"]])
+            ly = max([yi for yi in self.perimeter["y_centroid"]]) - min([yi for yi in self.perimeter["y_centroid"]])
+            
+            if self.has_studrail or self.condition == "I":
+                gamma_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx)))
+            elif self.condition == "N" or self.condition == "S":
+                pass
+            elif self.condition == "W" or self.condition == "E":
+                pass
+            else:
+                #corner condition
+                pass
+            
+        else:
+            self.gamma_vx = gamma_vx
+            
+            
+            
+            
+            
+            
+            
+            
+            
+        # calculate gamma_vy
+        if gamma_vy == "auto":
+            pass
+        else:
+            self.gamma_vy = gamma_vy
+            
+            
+        
+        # calculate and store final applied forces
+        self.Mx_final = self.gamma_vx*(Mx + Pey)
+        self.My_final = self.gamma_vy*(My + Pex)
+        self.P = P
+        self.Mx = Mx
+        self.My = My
+        self.Pex = Pex
+        self.Pey = Pey
+        
+        # loop through every perimeter patch to calculate shear stress using elastic method
+        N_patches = len(self.perimeter["x_centroid"])
+        for i in range(N_patches):
+            dx = self.perimeter["x_centroid"][i] - self.x_centroid
+            dy = self.perimeter["y_centroid"][i] - self.y_centroid
+            
+            v_axial = - self.P / self.A
+            v_Mx = -self.Mx_final * dy / self.Ix
+            v_My = self.My_final * dx / self.Iy
+            v_total = v_axial + v_Mx + v_My
+            Fz = v_total * self.perimeter["area"][i]
+            Mxi = Fz * dy
+            Myi = -Fz * dx
+            
+            self.perimeter["v_axial"].append(v_axial)
+            self.perimeter["v_Mx"].append(v_Mx)
+            self.perimeter["v_My"].append(v_My)
+            self.perimeter["v_total"].append(v_total)
+            self.perimeter["Fz"].append(Fz)
+            self.perimeter["Mxi"].append(Mxi)
+            self.perimeter["Myi"].append(Myi)
+            
+        # check equilibrium
+        self.check_equilibrium()
+        
+        # convert perimeter dict to dataframe and return
+        self.df_perimeter = pd.DataFrame(self.perimeter)
+        
+        return self.df_perimeter
+        
     
+    
+
     def check_equilibrium(self):
-        pass
+        """
+        Check if results are correct by checking equilibrium
+        """
+        TOL = 0.1
+        
+        sumFz = sum(self.perimeter["Fz"])
+        sumMx = sum(self.perimeter["Mxi"])
+        sumMy = sum(self.perimeter["Myi"])
+        
+        residual_Fz = sumFz + self.P
+        residual_Mx = sumMx + self.Mx_final
+        residual_My = sumMy + self.My_final
+        
+        flag_Fz = "OK" if abs(residual_Fz) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
+        flag_Mx = "OK" if abs(residual_Mx) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
+        flag_My = "OK" if abs(residual_My) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
+        
+        if flag_Fz !="OK" or flag_Mx !="OK" or flag_My !="OK":
+            print(f"\t\t Fz_applied={self.P:.2f},\t  sumFz={sumFz:.2f},\t residual = {residual_Fz:.2f},\t {flag_Fz}")
+            print(f"\t\t Mx_applied={self.Mx_final:.2f},\t  sumMx={sumMx:.2f},\t residual = {residual_Mx:.2f},\t {flag_Mx}")
+            print(f"\t\t My_applied={self.My_final:.2f},\t  sumMy={sumMy:.2f},\t residual = {residual_My:.2f},\t {flag_My}")
+            raise RuntimeError("Error: Equilibrium check failed.")
+    
+    
     
     def plot_results(self):
         pass
@@ -941,13 +1170,217 @@ class PunchingShearSection:
     
     
     
+
     
-    
-    def preview_3D(self):
-        pass
-    
-    def plot_results_3D(self):
-        pass
+    def plot_results_3D(self, colormap="jet", cmin="auto", cmax="auto"):
+        """
+        Use plotly to generate an interactive plot.
+        
+        Args:
+            colormap        (OPTIONAL) str:: colormap used to plot stress contour. I like jet and turbo. https://plotly.com/python/builtin-colorscales/
+            cmin            (OPTIONAL) str or float:: minimum shear stress for contour (psi). Default = "auto".
+            cmax            (OPTIONAL) str or float:: maximum shear stress for contour (psi). Default = "auto".
+        
+        Returns:
+            a plotly figure object
+        """     
+        # initialize a plotly figure with 2 subplots
+        fig = make_subplots(rows=2, cols=2,
+                            subplot_titles=("Shear Perimeter Properties", "Vector Plot", "Applied Loading"),
+                            column_widths=[0.3, 0.7],
+                            row_heights=[0.65, 0.35],
+                            horizontal_spacing=0.02,
+                            vertical_spacing=0.05,
+                            specs = [[{"type":"table"}, {"type":"scene","rowspan":2}],
+                                     [{"type":"table"}, None],
+                                     ])
+        
+        # properties table
+        table_properties = [r"$x_{{cg}}$",
+                     r"$y_{{cg}}$",
+                     r"$b_o$",
+                     r"$A$",
+                     r"$J_{x}$",
+                     r"$J_{y}$",
+                     r"$S_{{x,top}}$",
+                     r"$S_{{x,bottom}}$",
+                     r"$S_{{y,right}}$",
+                     r"$S_{{y,left}}$"]
+        table_values = [r"${:.2f} \quad in$".format(self.x_centroid),
+                        r"${:.2f} \quad in$".format(self.y_centroid),
+                        r"${:.1f} \quad in$".format(self.L),
+                        r"${:,.0f} \quad in^2$".format(self.A),
+                        r"${:,.0f} \quad in^3$".format(self.Ix),
+                        r"${:,.0f} \quad in^3$".format(self.Iy),
+                        r"${:,.0f} \quad in^2$".format(self.Sx1),
+                        r"${:,.0f} \quad in^2$".format(self.Sx2),
+                        r"${:,.0f} \quad in^2$".format(self.Sy1),
+                        r"${:,.0f} \quad in^2$".format(self.Sy2)]
+        property_table = go.Table(header_values = ['Parameters', 'Value'],
+                                  header_line_color = "black",
+                                  header_font_color = "white",
+                                  header_fill_color = "#3b3b41",
+                                  header_align = "center",
+                                  header_font_size = 18,
+                                  header_height = 34,
+                                  cells_values = [table_properties, table_values],
+                                  cells_line_color = "black",
+                                  cells_font_color = "black",
+                                  cells_fill_color = "white",
+                                  cells_align = "center",
+                                  cells_font_size = 22,
+                                  cells_height = 34,
+                                  )
+        fig.add_trace(property_table, row=1, col=1)
+        
+        # applied force table
+        table_properties = [r"$P$",
+                            r"$M_x$",
+                            r"$M_y$",
+                            r"$\gamma_v$",
+                            r"$P_{{ex}}$",
+                            r"$P_{{ey}}$",
+                            r"$\gamma_v(M_x + P_{{ey}})$",
+                            r"$\gamma_v(M_y + P_{{ex}})$"
+                            ]
+        
+        table_values = [r"${:.1f} \quad kips$".format(self.P),
+                        r"${:.1f} \quad k.in$".format(self.Mx),
+                        r"${:.1f} \quad k.in$".format(self.My),
+                        r"${:.2f}$".format(self.gamma_v),
+                        r"${:.1f} \quad k.in$".format(self.Pex),
+                        r"${:.1f} \quad k.in$".format(self.Pey),
+                        r"${:.1f} \quad k.in$".format(self.Mx_final),
+                        r"${:.1f} \quad k.in$".format(self.My_final)]
+        property_table = go.Table(header_values = ['Applied Load', 'Value'],
+                                  header_line_color = "black",
+                                  header_font_color = "white",
+                                  header_fill_color = "#3b3b41",
+                                  header_align = "center",
+                                  header_font_size = 18,
+                                  header_height = 34,
+                                  cells_values = [table_properties, table_values],
+                                  cells_line_color = "black",
+                                  cells_font_color = "black",
+                                  cells_fill_color = "white",
+                                  cells_align = "center",
+                                  cells_font_size = 22,
+                                  cells_height = 34,
+                                  )
+        fig.add_trace(property_table, row=2, col=1)
+        
+        
+        # plot orgin marker at centroid of perimeter
+        xmax = max(self.perimeter["x_centroid"])
+        xmin = min(self.perimeter["x_centroid"])
+        ymax = max(self.perimeter["y_centroid"])
+        ymin = min(self.perimeter["y_centroid"])
+        dmax = max(xmax-xmin, ymax-ymin)/1.5
+        X = go.Scatter3d(
+            x=[self.x_centroid, self.x_centroid + dmax/14],
+            y=[self.y_centroid, self.y_centroid],
+            z=[0,0],
+            mode='lines+text',
+            hoverinfo = 'skip',
+            showlegend=False,
+            line=dict(color='blue', width=5),
+            text=["","X"],
+            textposition="top center",
+            textfont=dict(
+                family="Arial",
+                size=14,
+                color="blue"))
+        fig.add_trace(X, row=1, col=2)
+        Y = go.Scatter3d(
+            x=[self.x_centroid, self.x_centroid],
+            y=[self.y_centroid, self.y_centroid + dmax/14],
+            z=[0,0],
+            mode='lines+text',
+            hoverinfo = 'skip',
+            line=dict(color='red', width=5),
+            text=["","Y"],
+            textposition="top center",
+            showlegend=False,
+            textfont=dict(
+                family="Arial",
+                size=14,
+                color="red"))
+        fig.add_trace(Y,row=1, col=2)
+        Z = go.Scatter3d(
+            x=[self.x_centroid, self.x_centroid],
+            y=[self.y_centroid, self.y_centroid],
+            z=[0, 0 + self.slab_depth/3],
+            mode='lines+text',
+            hoverinfo = 'skip',
+            line=dict(color='green', width=5),
+            text=["","Z"],
+            textposition="top center",
+            showlegend=False,
+            textfont=dict(
+                family="Arial",
+                size=14,
+                color="green"))
+        fig.add_trace(Z, row=1, col=2)
+        
+        
+        # plot shear stress quiver contour
+        cmin = min(self.df_perimeter["v_total"])*1000 if cmin == "auto" else cmin*1000
+        cmax = max(self.df_perimeter["v_total"])*1000 if cmax == "auto" else cmax*1000
+        if math.isclose(cmax-cmin, 0):
+            cmin = 0
+        sizeref = abs(6/cmax) # fixes arrow scaling issues
+        # need to use sizemode raw which is not available on older versions of plotly
+        custom_hover = '<b>x</b>: %{x:.1f} in<br>' +\
+            '<b>y</b>: %{y:.1f} in<br>' +\
+            '<b>stress</b>: %{w:.1f} psi<br>'
+        cone_plot = go.Cone(x = self.df_perimeter["x_centroid"],
+                            y = self.df_perimeter["y_centroid"],
+                            z = [0] * len(self.df_perimeter["y_centroid"]),
+                            u = [0] * len(self.df_perimeter["v_total"]),
+                            v = [0] * len(self.df_perimeter["v_total"]),
+                            w = [a*1000 for a in self.df_perimeter["v_total"]],
+                            colorbar_title_text="(psi)",
+                            hovertemplate = custom_hover,
+                            hoverlabel_font_size=16,
+                            colorscale=colormap,
+                            cmin=cmin,
+                            cmax=cmax,
+                            sizemode = "raw",
+                            sizeref = sizeref)
+        fig.add_trace(cone_plot, row=1, col=2)
+        
+
+        # change such that axes are in proportion.
+        fig.update_scenes(aspectmode="data")
+        
+        # add title
+        fig.update_layout(title="<b>Punching Shear Analysis Result Summary</b>",
+                          title_xanchor="center",
+                          title_font_size=22,
+                          title_x=0.5, 
+                          title_y=0.98,
+                          title_font_color="black")
+        
+        # background color
+        fig.update_layout(paper_bgcolor="white",
+                          font_color="black")
+        
+        # adjust zoom level and default camera position
+        fig.update_scenes(camera_eye=dict(x=2, y=2, z=2))
+        
+        # change origin to be on the bottom left corner
+        fig.update_scenes(xaxis_autorange="reversed")
+        fig.update_scenes(yaxis_autorange="reversed")
+        fig.update_scenes(xaxis_backgroundcolor="white",
+                          yaxis_backgroundcolor="white",
+                          xaxis_gridcolor="grey",
+                          yaxis_gridcolor="grey",
+                          xaxis_gridwidth=0.5,
+                          yaxis_gridwidth=0.5,
+                          zaxis_visible=False,
+                          )
+        fig.show()
+        return fig
 
 
 

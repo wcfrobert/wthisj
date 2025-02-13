@@ -2,14 +2,14 @@
   <br>
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/logo.png?raw=true" alt="logo" style="width: 60%;" />
   <br>
-  Concrete Slab Punching Shear Calculation in Python
+  Concrete Slab Punching Shear Calculation in Python (WORK IN PROGRESS)
   <br>
 </h1>
 
 
 
 <div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/plot1.png?raw=true" alt="demo" style="width: 80%;" />
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/preview.png?raw=true" alt="demo" style="width: 80%;" />
 </div>
 
 
