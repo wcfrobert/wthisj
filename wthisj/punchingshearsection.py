@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,10 +29,10 @@ class PunchingShearSection:
             Use the average depth of the two orthogonal slab directions.
             
         condition (str):
-            Specify interior, edge, or corner condition. Valid inputs include:
-                "NW"   "N"   "NE"
-                 "W"   "I"   "E"
-                "SW"   "S"   "SE"   
+            Specify interior, edge, or corner condition. Valid inputs looks like cardinal directions on a compass.
+                "NW"     "N"     "NE"
+                "W"      "I"     "E"
+                "SW"     "S"     "SE"   
             for example, "SE" is a corner condition with slab edge below and to the right.  
             
         (OPTIONAL) overhang_x = 0 (float):
@@ -46,6 +47,9 @@ class PunchingShearSection:
         (OPTIONAL) auto_generate_perimeter = True (bool):
             Auto-generate punching shear perimeter based on the other inputs. Default = True.
             Alternatively, the user may draw the perimeters manually using .add_perimeter().
+            
+        (OPTIONAL) PATCH_SIZE = 0.5 (float):
+            Specify how fine to discretize the perimeter. Default = 0.2 inches
     
     Public Methods:
         PunchingShearSection.add_perimeter()
@@ -57,7 +61,8 @@ class PunchingShearSection:
         PunchingShearSection.plot_results_3D()
     """
     def __init__(self, width, height, slab_depth, condition, 
-                 overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True):
+                 overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True,
+                 PATCH_SIZE=0.5):
         # input arguments. See descriptions in docstring above.
         self.width = width
         self.height = height
@@ -67,14 +72,16 @@ class PunchingShearSection:
         self.overhang_y = overhang_y
         self.L_studrail = L_studrail
         self.generate_perimeter = auto_generate_perimeter
+        self.PATCH_SIZE = PATCH_SIZE
         
-        # parameters related to column and slab geometry
-        self.has_studrail = False if self.L_studrail==0 else True       # bool for if studrail exists
+        # parameter related to geometry
         self.perimeter_pts = []                         # list of pts to generate perimeter using auto_generate_perimeters()
+        self.openings = []                              # list of openings, each opening is a list of 4 pts
+        
+        # parameter related to geometry (plotting only)
         self.studrail_pts = []                          # list of pts to plot studrails
         self.slabedge_lines = []                        # list of lines to plot slab edge. Each line is two points
         self.slabedge_pts = []                          # list of pts to plot slab shading
-        self.openings = []                              # list of openings, each opening is a list of 4 pts
         self.openings_draw_pts = []                     # list of pts in each opening used to draw theta_min and max dotted lines
         self.col_pts = [np.array([-self.width/2, -self.height/2]),      # list of pts to plot column
                         np.array([self.width/2, -self.height/2]),
@@ -106,6 +113,11 @@ class PunchingShearSection:
         self.gamma_vy = None                            # percentage of Y unbalanced moment transferred through eccentric shear
         self.Mx_final = None                            # final governing moment in x-direction = gamma_v*(Mx + Pey)
         self.My_final = None                            # final governing moment in y-direction = gamma_v*(My + Pex)
+        
+        # other parameters
+        self.has_studrail = False if self.L_studrail==0 else True       # bool for if studrail exists
+        self.equilibrium_check_passed = None                            # bool for if equilibrium check passed or not
+        self.v_max = None                                               # maximum calculated shear stress
         
         # dictionary storing perimeter information
         self.perimeter = {"x_centroid":[],              # x coordinate of centroid of patch
@@ -145,8 +157,6 @@ class PunchingShearSection:
         Return:
             None
         """
-        MIN_PATCH_SIZE = 0.5  # 0.5 inches default patch size
-        
         # convert into numpy arrays
         start = np.array(start)
         end = np.array(end)
@@ -154,7 +164,7 @@ class PunchingShearSection:
         
         # calculate number of segments
         length_line = np.linalg.norm(position_vector)
-        segments = int(length_line // MIN_PATCH_SIZE) if length_line > MIN_PATCH_SIZE else 1
+        segments = int(length_line // self.PATCH_SIZE) if length_line > self.PATCH_SIZE else 1
         length_segments = length_line / (segments)
         
         # discretize into N segments (N+1 end points)
@@ -743,10 +753,13 @@ class PunchingShearSection:
         self.Sy2 = self.Iy / abs(min(all_x) - self.x_centroid)
         
         # principal axes via Mohr's circle
-        if self.Ix == self.Iy:
+        if math.isclose(self.Ixy, 0, abs_tol=1e-6):
             self.theta_p = 0
         else:
-            self.theta_p = (  math.atan((self.Ixy)/((self.Ix-self.Iy)/2)) / 2) * 180 / math.pi
+            if math.isclose(self.Ix, self.Iy, abs_tol=1e-6):
+                self.theta_p = 45
+            else:
+                self.theta_p = (  math.atan((self.Ixy)/((self.Ix-self.Iy)/2)) / 2) * 180 / math.pi
     
     
     def preview(self):
@@ -755,11 +768,6 @@ class PunchingShearSection:
         """
         # update geometric property
         self.update_properties()
-        
-        # check if perimeter is in its principal axes
-        if abs(self.theta_p) > 0.1:
-            print("WARNING: GEOMETRY IS NOT IN PRINCIPAL ORIENTATION!")
-            print("Please rotate geometry by {:.1f} degrees using the .rotate() method".format(self.theta_p))
         
         # initialize figure
         fig, axs = plt.subplots(1,2, figsize=(11,8.5), gridspec_kw={"width_ratios":[2,3]})
@@ -833,13 +841,13 @@ class PunchingShearSection:
                         color="black",
                         arrowprops=dict(arrowstyle="simple,head_length=0.4,head_width=0.30,tail_width=0.06",
                                             fc="darkblue", ec="darkblue"))
-        axs[1].annotate("X'",
+        axs[1].annotate("X",
                         xy=(self.x_centroid, self.y_centroid), 
                         xytext=(self.x_centroid+1.2*ordinate, self.y_centroid),
                         va="center",
                         ha="center",
                         color="darkblue")
-        axs[1].annotate("Y'",
+        axs[1].annotate("Y",
                         xy=(self.x_centroid, self.y_centroid), 
                         xytext=(self.x_centroid, self.y_centroid+1.2*ordinate),
                         va="center",
@@ -871,7 +879,7 @@ class PunchingShearSection:
             pt4 = np.array([x1, y1]) + v_unit * line_thicknesses[i]
             vertices = [pt1, pt2, pt3, pt4, pt1]
             axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="blue",
-                                          alpha=0.4, edgecolor="darkblue", zorder=1, lw=0.5))
+                                          alpha=0.4, edgecolor="darkblue", zorder=1, lw=0.1))
             
         # annotation for perimeter geometric properties
         xo = 0.12
@@ -887,12 +895,12 @@ class PunchingShearSection:
         
         axs[0].annotate("Moment of Inertias", 
                         (xo-0.03,yo-dy*3), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$J_x = {:,.0f} \quad {}^4$".format(self.Ix, unit), 
+        axs[0].annotate(r"$I_x = {:,.0f} \quad {}^4$".format(self.Ix, unit), 
                         (xo,yo-dy*4), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$J_y = {:,.0f} \quad {}^4$".format(self.Iy, unit), 
+        axs[0].annotate(r"$I_y = {:,.0f} \quad {}^4$".format(self.Iy, unit), 
                         (xo,yo-dy*5), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         
-        axs[0].annotate("Shear Perimeter/Area", 
+        axs[0].annotate("Shear Perimeter and Area", 
                         (xo-0.03,yo-dy*6), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
         axs[0].annotate(r"$L = {:.1f} \quad {}$".format(self.L, unit), 
                         (xo,yo-dy*7), xycoords='axes fraction', fontsize=12, va="top", ha="left")
@@ -920,7 +928,7 @@ class PunchingShearSection:
 
         # styling
         axs[1].set_aspect('equal', 'datalim')
-        fig.suptitle("Punching Shear Perimeter", fontweight="bold", fontsize=16)
+        fig.suptitle("Punching Shear Perimeter Properties", fontweight="bold", fontsize=16)
         axs[1].set_axisbelow(True)
         axs[0].set_xticks([])
         axs[0].set_yticks([])
@@ -928,9 +936,10 @@ class PunchingShearSection:
         plt.tight_layout()
     
 
-    def solve(self, P, Mx, My, gamma_vx="auto", gamma_vy="auto", include_Pe=True, auto_rotate=True):
+    def solve(self, P, Mx, My, gamma_vx="auto", gamma_vy="auto", 
+              consider_Pe=True, auto_rotate=True, verbose=True):
         """
-        Calculate shear stress at every point along the column perimeter.
+        Calculate shear stress at every point along the column perimeter. (ALL UNIT IN KIP, IN)
         
         Args:
             P (float): 
@@ -944,31 +953,33 @@ class PunchingShearSection:
                 
             (OPTIONAL) gamma_vx = "auto" (str or float): 
                 Percentage of X moment transferred to the column via shear. By default,
-                this quantity is automatically calculated. Alternatively, the user may 
+                wthisj automatically calculates this. Alternatively, the user may 
                 enter a specific value of gamma_v (e.g. 0.4)
                 
             (OPTIONAL) gamma_vy = "auto" (str or float): 
                 Percentage of Y moment transferred to the column via shear. By default,
-                this quantity is automatically calculated. Alternatively, the user may 
+                wthisj automatically calculates this. Alternatively, the user may 
                 enter a specific value of gamma_v (e.g. 0.4)
                 
-            (OPTIONAL) include_Pe = True (bool): 
+            (OPTIONAL) consider_Pe = True (bool): 
                 Boolean to consider additional moment due to eccentricity between 
                 the column centroid and perimeter centroid. Defaults to True.
-                
-            (OPTIONAL) auto_rotate = True (bool): 
-                Boolean to rotate everything, including the applied moment automatically if the
-                geometry is not in the principal orientation. Defaults to True.
+            
+            (OPTIONAL) auto_rotate = True (bool):
+                Boolean to auto-rotate geometry if it is not in principal orientation.
+            
+            (OPTIONAL) verbose = True (bool):
+                Boolean to print out calculations step by step.
                 
         Returns:
             df_perimeter (dataframe): 
-                Calculation summary table. Each row is a patch of the column perimeter.
+                Calculation summary table. Each row is a patch of the perimeter.
             
             
         Notes about applied moment:
             The user-specified moment (Mx, My) goes through several rounds of adjustment and may
             not be what the user expects. These rounds are explained more in-depth below.
-                1. Rotate moment vector to principal orientation is applicable
+                1. Rotate moment vector to principal orientation if necessary (i.e. theta_p != 0)
                         (Mx', My')
                 2. Additional moment due to eccentricity between column centroid and perimeter centroid
                         (Mx'+Pey , My'+Pex)
@@ -979,35 +990,34 @@ class PunchingShearSection:
             The elastic method takes advantage of principle of superposition. In practice, this means
             we can calculate stress due to P/A, then M/S in both directions, then add (superimpose) them
             at the end. However, superposition is NOT valid for asymmetric sections not in its principal
-            orientation. This is described in detail in all mechanics of material textbooks. We know a
+            orientation. This is described in detail in any mechanics of material textbooks. We know a
             section is in its principal orientation if the product of inertia (Ixy) is equal to zero.
             
-            For corner column conditions, the L-shaped perimeter is rotated 45 degrees - along with the
-            applied moment vector - to get to the principal orientation. The presence of opening can also 
-            make a perimeter non-principal (i.e. Ixy != 0).
-            
-            
+        
         (2) Additional moment due to Pe:
-            Most people obtain the applied shear (P) and unbalanced moment (Mx, My) using FEM software that
+            Most engineers obtain the applied shear (P) and unbalanced moment (Mx, My) using FEM software that
             reports column reactions. The problem is the column centroid does NOT coincide with the perimeter
             centroid in edge/corner conditions. I am not convinced anyone actually does this adjustment in practice,
-            but it is described in detail in ACI 421.1R-20.
+            but it is described in detail in ACI 421.1R-20 and I think it makes sense.
             
         
         (3) Notes about gamma_v:
-            Unbalanced moment within the slab is transferred to the supporting columns in two ways:
+            Unbalanced moment in the slab is transferred to the supporting columns in two ways:
                 1. Flexure within a slab "transfer width" (GAMMA_F)
-                2. Eccentric shear (GAMMA_V)
-            GAMMA_F and GAMMA_V should add up to 100%. The second action is of particular interest 
-            because it pertains to shear stress. The user may wish to calculate specify a gamma_v value 
-            themselves. Alternatively, if gamma_v is set to "auto", the transfer ratio is calculated 
-            internally. For more information about how these are calculated, refer to ACI 318-19 and
-            ACI 421.1R-20.
+                2. Eccentric Shear (GAMMA_V)
+            GAMMA_F and GAMMA_V should add up to 100%. The user can specify a gamma_v value themselves. 
+            Alternatively, if gamma_v is set to "auto", it is calculated internally. For more information 
+            about how these are calculated, refer to ACI 318-19 and ACI 421.1R-20. 
+            
+            The fundamental equation is: gamma_v = 1 - 1 / (1 + (2/3)*sqrt(b1/b2)), where b1 is perimeter
+            dimension perpendicular to moment vector (i.e. along the span), and b2 is perimeter dimension 
+            parallel to moment vector. All gamma_v values are calculated with respect to the original 
+            unrotated geometry, except the condition of corner columns with studrails.
                 Let:
                     lx = max(xi) - min(xi)
                     ly = max(yi) - min(yi)
                 
-                For the columns WITHOUT studrails (all conditions):
+                For the columns without studrails:
                     gamma_vx = 1 - 1 / (1 + (2/3)*sqrt(ly/lx))
                     gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly))
                 
@@ -1024,7 +1034,7 @@ class PunchingShearSection:
                         gamma_vx = 1 - 1 / (1 + (2/3)*sqrt(ly/lx))
                         gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly - 0.2))
                     
-                    Corner conditions (NW, NE, SW, SE)
+                    Corner conditions (NW, NE, SW, SE) - gamma_v caculated in principal orientation
                         gamma_vx = 0.4
                         gamma_vy = 1 - 1 / (1 + (2/3)*sqrt(lx/ly - 0.2))
                         Assuming moment vector Mx points at or away from the column, otherwise flip gamma_vx and gamma_vy
@@ -1032,70 +1042,76 @@ class PunchingShearSection:
                 For custom-defined perimeters:
                     User must provide gamma_v themselves. Program will terminate with a warning if none is provided.
         """
-        # rotate geometry and applied moment if applicable
-        required_rotation = self.theta_p
-        if abs(required_rotation) > 0.1 and auto_rotate:
-            print("WARNING: Automatically rotating geometry to its principal orientation: {:.1f} deg".format(required_rotation))
-            self.rotate(required_rotation)
-            M_vec = np.array([Mx, My])
-            T = np.array([
-                [math.cos(required_rotation*math.pi/180), -math.sin(required_rotation*math.pi/180)],
-                [math.sin(required_rotation*math.pi/180), math.cos(required_rotation*math.pi/180)]
-                ])
-            M_vec_rotated = T @ M_vec
-            Mx = M_vec_rotated[0]
-            My = M_vec_rotated[1]
+        time_start = time.time()
         
-        # update geometric property again in case geometry rotated
+        # update property before analysis
+        self.update_properties()
+    
+        # if perimeter is defined by user, gamma_v must be specified explicitly
+        did_not_auto_generate_perimeter = not self.generate_perimeter
+        did_not_specify_gamma_v = gamma_vx == "auto" or gamma_vy == "auto"
+        if did_not_auto_generate_perimeter and did_not_specify_gamma_v:
+            raise RuntimeError("WARNING: Custom perimeter detected. Cannot calculate gamma_v automatically. Please provide it")
+        
+        # calculate gamma_v
+        lx = max([xi for xi in self.perimeter["x_centroid"]]) - min([xi for xi in self.perimeter["x_centroid"]])
+        ly = max([yi for yi in self.perimeter["y_centroid"]]) - min([yi for yi in self.perimeter["y_centroid"]])
+        if self.has_studrail:
+            if self.condition == "I":
+                g_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx)))
+                g_vy = 1 - (1 / (1 + (2/3)*math.sqrt(lx/ly)))
+            elif self.condition == "N" or self.condition == "S":
+                g_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx) - 0.2)) if ly/lx > 0.2 else 0
+                g_vy = 1 - (1 / (1 + (2/3)*math.sqrt(lx/ly)))
+            elif self.condition == "W" or self.condition == "E":
+                g_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx)))
+                g_vy = 1 - (1 / (1 + (2/3)*math.sqrt(lx/ly) - 0.2)) if lx/ly > 0.2 else 0
+            else:
+                # for corner condition, we will calculate gamma_v after rotation
+                pass 
+        else:
+            g_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx)))
+            g_vy = 1 - (1 / (1 + (2/3)*math.sqrt(lx/ly)))
+        
+        # rotate geometry and applied moment if not about principal orientation
+        required_rotation = self.theta_p
+        if abs(required_rotation) > 0.1:
+            if auto_rotate:
+                self.rotate(required_rotation)
+                M_vec = np.array([Mx, My])
+                T = np.array([
+                    [math.cos(required_rotation*math.pi/180), -math.sin(required_rotation*math.pi/180)],
+                    [math.sin(required_rotation*math.pi/180), math.cos(required_rotation*math.pi/180)]
+                    ])
+                M_vec_rotated = T @ M_vec
+                Mx = M_vec_rotated[0]
+                My = M_vec_rotated[1]
+                
+        # update property again after rotation
         self.update_properties()
         
+        # for corner condition, gamma_v is calculated in the rotated principal orientation
+        if self.has_studrail:
+            if self.condition == "NW" or self.condition == "NE" or self.condition == "SW" or self.condition == "SE":
+                if ly > lx:
+                    g_vx = 0.4
+                    g_vy = 1 - (1 / (1 + (2/3)*math.sqrt(lx/ly) - 0.2)) if lx/ly > 0.2 else 0
+                else:
+                    g_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx) - 0.2)) if ly/lx > 0.2 else 0
+                    g_vy = 0.4
+        
+        # do not use the calculated gamma_v value above if user provided their own
+        self.gamma_vx = g_vx if gamma_vx=="auto" else gamma_vx
+        self.gamma_vy = g_vy if gamma_vy=="auto" else gamma_vy
+        
         # calculate Pe moment if applicable
-        if include_Pe:
+        if consider_Pe:
             Pex = -P * self.x_centroid # there is a right-hand rule sign flip here
             Pey = P * self.y_centroid
         else:
             Pex = 0
             Pey = 0
             
-        # calculate gamma_vx
-        did_not_auto_generate_perimeter = not self.generate_perimeter
-        did_not_specify_gamma_v = gamma_vx == "auto" or gamma_vy == "auto"
-        if did_not_auto_generate_perimeter and did_not_specify_gamma_v:
-            raise RuntimeError("WARNING: Custom perimeter detected. Cannot calculate gamma_v automatically. Please provide it")
-            
-        if gamma_vx == "auto":
-            lx = max([xi for xi in self.perimeter["x_centroid"]]) - min([xi for xi in self.perimeter["x_centroid"]])
-            ly = max([yi for yi in self.perimeter["y_centroid"]]) - min([yi for yi in self.perimeter["y_centroid"]])
-            
-            if self.has_studrail or self.condition == "I":
-                gamma_vx = 1 - (1 / (1 + (2/3)*math.sqrt(ly/lx)))
-            elif self.condition == "N" or self.condition == "S":
-                pass
-            elif self.condition == "W" or self.condition == "E":
-                pass
-            else:
-                #corner condition
-                pass
-            
-        else:
-            self.gamma_vx = gamma_vx
-            
-            
-            
-            
-            
-            
-            
-            
-            
-        # calculate gamma_vy
-        if gamma_vy == "auto":
-            pass
-        else:
-            self.gamma_vy = gamma_vy
-            
-            
-        
         # calculate and store final applied forces
         self.Mx_final = self.gamma_vx*(Mx + Pey)
         self.My_final = self.gamma_vy*(My + Pex)
@@ -1110,7 +1126,6 @@ class PunchingShearSection:
         for i in range(N_patches):
             dx = self.perimeter["x_centroid"][i] - self.x_centroid
             dy = self.perimeter["y_centroid"][i] - self.y_centroid
-            
             v_axial = - self.P / self.A
             v_Mx = -self.Mx_final * dy / self.Ix
             v_My = self.My_final * dx / self.Iy
@@ -1118,7 +1133,6 @@ class PunchingShearSection:
             Fz = v_total * self.perimeter["area"][i]
             Mxi = Fz * dy
             Myi = -Fz * dx
-            
             self.perimeter["v_axial"].append(v_axial)
             self.perimeter["v_Mx"].append(v_Mx)
             self.perimeter["v_My"].append(v_My)
@@ -1126,53 +1140,253 @@ class PunchingShearSection:
             self.perimeter["Fz"].append(Fz)
             self.perimeter["Mxi"].append(Mxi)
             self.perimeter["Myi"].append(Myi)
-            
+        self.v_max = abs(max(self.perimeter["v_total"], key=abs))
+        
         # check equilibrium
-        self.check_equilibrium()
-        
-        # convert perimeter dict to dataframe and return
-        self.df_perimeter = pd.DataFrame(self.perimeter)
-        
-        return self.df_perimeter
-        
-    
-    
-
-    def check_equilibrium(self):
-        """
-        Check if results are correct by checking equilibrium
-        """
         TOL = 0.1
-        
         sumFz = sum(self.perimeter["Fz"])
         sumMx = sum(self.perimeter["Mxi"])
         sumMy = sum(self.perimeter["Myi"])
-        
         residual_Fz = sumFz + self.P
         residual_Mx = sumMx + self.Mx_final
         residual_My = sumMy + self.My_final
-        
         flag_Fz = "OK" if abs(residual_Fz) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
         flag_Mx = "OK" if abs(residual_Mx) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
         flag_My = "OK" if abs(residual_My) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
-        
-        if flag_Fz !="OK" or flag_Mx !="OK" or flag_My !="OK":
-            print(f"\t\t Fz_applied={self.P:.2f},\t  sumFz={sumFz:.2f},\t residual = {residual_Fz:.2f},\t {flag_Fz}")
-            print(f"\t\t Mx_applied={self.Mx_final:.2f},\t  sumMx={sumMx:.2f},\t residual = {residual_Mx:.2f},\t {flag_Mx}")
-            print(f"\t\t My_applied={self.My_final:.2f},\t  sumMy={sumMy:.2f},\t residual = {residual_My:.2f},\t {flag_My}")
-            raise RuntimeError("Error: Equilibrium check failed.")
-    
-    
-    
-    def plot_results(self):
-        pass
-    
-    
-    
-    
+        self.equilibrium_check_passed = flag_Fz =="OK" and flag_Mx =="OK" and flag_My =="OK"
 
+
+        # convert perimeter dict to dataframe and return
+        self.df_perimeter = pd.DataFrame(self.perimeter)
+        
+        # print out calculations step-by-step
+        if verbose:
+            print("1. Rotate to principal orientation...")
+            if abs(required_rotation) > 0.1:
+                if auto_rotate:
+                    print("\t\t Rotating geometry by {:.1f} deg".format(required_rotation))
+                    print("\t\t\t Done!")
+                    print("\t\t Rotating applied moment by {:.1f} deg".format(required_rotation))
+                    print("\t\t\t Before: (Mx, My) = ({:.1f} k.in,  {:.1f} k.in)".format(M_vec[0], M_vec[1]))
+                    print("\t\t\t After: (Mx, My) = ({:.1f} k.in,  {:.1f} k.in)".format(M_vec_rotated[0], M_vec_rotated[1]))
+                else:
+                    print("\t\t WARNING: Auto rotation is disabled. Perimeter is NOT in its principal orientation")
+                    print("\t\t WARNING: Equilibrium check will fail unless geometry is rotated by {:.1f} deg.".format(required_rotation))
+            else:
+                print("\t\t Already in principal orientation. Rotation not needed.")
+                
+            print("2. Adjusting applied moment...")
+            print("\t\t Given:")
+            if abs(required_rotation) > 0.1 and auto_rotate:
+                print("\t\t\t Mx = {:.1f} k.in".format(M_vec[0]))
+                print("\t\t\t My = {:.1f} k.in".format(M_vec[1]))
+                print("\t\t Rotating to principal orientation:")
+                print("\t\t\t Mx = {:.1f} k.in".format(M_vec_rotated[0]))
+                print("\t\t\t My = {:.1f} k.in".format(M_vec_rotated[1]))
+            else:
+                print("\t\t\t Mx = {:.1f} k.in".format(Mx))
+                print("\t\t\t My = {:.1f} k.in".format(My))
+            print("\t\t Adjusting for eccentricity between column and perimeter centroid:")
+            print("\t\t\t Mx + Pey = {:.1f} + {:.1f} = {:.1f} k.in".format(Mx, Pey, Mx + Pey))
+            print("\t\t\t My + Pex = {:.1f} + {:.1f} = {:.1f} k.in".format(My, Pex, My + Pex))
+            print("\t\t Applying gamma_v factor:")
+            print("\t\t\t gamma_vx * (Mx + Pey) = {:.1f} * {:.1f} = {:.1f} k.in".format(self.gamma_vx, Mx+Pey, self.Mx_final))
+            print("\t\t\t gamma_vy * (My + Pex) = {:.1f} * {:.1f} = {:.1f} k.in".format(self.gamma_vy, My+Pex, self.My_final))
+            
+            print("3. Calculating shear stress...")
+            print("\t\t Maximum shear stress = {:.1f} psi".format(self.v_max*1000))
+            
+            print("4. Checking equilibrium...")
+            print("\t\t {:<8} {:<10} {:<10} {:<10} {:<10}".format("Force", "Applied", "Reaction", "Residual", "Equilibrium?"))
+            print("\t\t " + "-" * 55)
+            print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("Fz", self.P, sumFz, residual_Fz, flag_Fz))
+            print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("Mx", self.Mx_final, sumMx, residual_Mx, flag_Mx))
+            print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("My", self.My_final, sumMy, residual_My, flag_My))
+            elaspsed_time = (time.time() - time_start) * 1000
+            print(f"Analysis completed in {elaspsed_time:.0f} ms.")
+                  
+        return self.df_perimeter
+        
     
-    def plot_results_3D(self, colormap="jet", cmin="auto", cmax="auto"):
+    def plot_results(self, colormap="jet", cmin="auto", cmax="auto"):
+        """
+        plot results using matplotlib.
+        
+        Args:
+            colormap        (OPTIONAL) str:: colormap for coloring perimeter. Default = "jet"
+                                        https://matplotlib.org/stable/gallery/color/colormap_reference.html
+            cmin            (OPTIONAL) str or float:: min shear stress (psi) for color mapping. Default = "auto".
+            cmax            (OPTIONAL) str or float:: max shear stress (psi) for color mapping. Default = "auto".
+        
+        Returns:
+            a matplotlib figure
+        """
+        # initialize figure
+        fig, axs = plt.subplots(1,2, figsize=(11,8.5), gridspec_kw={"width_ratios":[2,3]})
+        
+        # prepare colormap
+        cm = plt.get_cmap(colormap)
+        magnitude = [v*1000 for v in self.perimeter["v_total"]] # convert to psi
+        cmin = min(magnitude) if cmin == "auto" else cmin
+        cmax = max(magnitude) if cmax == "auto" else cmax
+        stress_is_uniform = math.isclose(cmax-cmin, 0)
+        if stress_is_uniform:
+            cmin = 0
+        v_normalized = [(v-cmin)/(cmax-cmin) for v in magnitude]
+        colors = [cm(x) for x in v_normalized]
+        
+
+        # plot perimeter mesh with polygon patches
+        DEFAULT_THICKNESS = 1  # for display
+        t_min = min(self.perimeter["depth"])
+        line_thicknesses = [t/t_min * DEFAULT_THICKNESS for t in self.perimeter["depth"]]
+        for i in range(len(self.perimeter["x_start"])):
+            x0 = self.perimeter["x_start"][i]
+            x1 = self.perimeter["x_end"][i]
+            y0 = self.perimeter["y_start"][i]
+            y1 = self.perimeter["y_end"][i]
+            
+            # calculate perpendicular direction vector to offset by thickness
+            u = np.array([x1,y1]) - np.array([x0,y0])
+            u_unit = u / np.linalg.norm(u)
+            v_unit = np.array([u_unit[1], -u_unit[0]])
+            
+            # plot using polygon patches
+            pt1 = np.array([x0, y0]) + v_unit * line_thicknesses[i]
+            pt2 = np.array([x0, y0]) - v_unit * line_thicknesses[i]
+            pt3 = np.array([x1, y1]) - v_unit * line_thicknesses[i]
+            pt4 = np.array([x1, y1]) + v_unit * line_thicknesses[i]
+            vertices = [pt1, pt2, pt3, pt4, pt1]
+            
+            # add patch to plot
+            axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor=colors[i],
+                                          alpha=1, edgecolor=colors[i], zorder=1, lw=0.5))
+            
+        # add a colorbar on the side
+        tick_values = np.linspace(cmin,cmax,6)
+        norm = mcolors.Normalize(vmin=cmin, vmax=cmax)
+        fig.colorbar(mcm.ScalarMappable(norm=norm, cmap=cm), 
+                     orientation='vertical',
+                     ax=axs[1],
+                     ticks=tick_values)
+        
+        # plot column
+        pt1 = self.col_pts[0]
+        pt2 = self.col_pts[1]
+        pt3 = self.col_pts[2]
+        pt4 = self.col_pts[3]
+        vertices = [pt1, pt2, pt3, pt4, pt1]
+        axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor="darkgrey",
+                                      alpha=0.8, edgecolor="black", zorder=2, lw=1.5))
+        
+        # plot studrails
+        if len(self.studrail_pts) != 0:
+            for i in range(len(self.studrail_pts)):
+                pt1 = self.studrail_pts[i][0]
+                pt2 = self.studrail_pts[i][1]
+                axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="black", zorder=2, linestyle="-", lw=3)
+        
+        # plot x-y principal axes
+        ordinate = 0.4*max(self.width, self.height)
+        axs[1].annotate("",
+                        xy=(self.x_centroid+ordinate, self.y_centroid), 
+                        xytext=(self.x_centroid, self.y_centroid),
+                        color="black",
+                        arrowprops=dict(arrowstyle="simple,head_length=0.6,head_width=0.50,tail_width=0.06",
+                                            fc="darkblue", ec="darkblue"))
+        axs[1].annotate("",
+                        xy=(self.x_centroid, self.y_centroid+ordinate), 
+                        xytext=(self.x_centroid, self.y_centroid),
+                        color="black",
+                        arrowprops=dict(arrowstyle="simple,head_length=0.6,head_width=0.50,tail_width=0.06",
+                                            fc="darkblue", ec="darkblue"))
+        axs[1].annotate("X",
+                        xy=(self.x_centroid, self.y_centroid), 
+                        xytext=(self.x_centroid+1.1*ordinate, self.y_centroid),
+                        va="center",
+                        ha="center",
+                        color="darkblue")
+        axs[1].annotate("Y",
+                        xy=(self.x_centroid, self.y_centroid), 
+                        xytext=(self.x_centroid, self.y_centroid+1.1*ordinate),
+                        va="center",
+                        ha="center",
+                        color="darkblue")
+        
+        # plot Cog
+        axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="darkblue",markersize=6, zorder=3, linestyle="none")
+        
+
+        # annotation for perimeter properties
+        xo = 0.12
+        yo = 0.97
+        dy = 0.045
+        unit = "in"
+        axs[0].annotate("Geometric Properties", 
+                        (xo-0.03,yo), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$x_{{cg}} = {:.1f} \quad {}$".format(self.x_centroid, unit), 
+                        (xo,yo-dy*1), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$y_{{cg}} = {:.1f} \quad {}$".format(self.y_centroid, unit), 
+                        (xo,yo-dy*2), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$L = {:.1f} \quad {}$".format(self.L, unit), 
+                        (xo,yo-dy*3), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$A = {:.1f} \quad {}^2$".format(self.A, unit), 
+                        (xo,yo-dy*4), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$I_x = {:,.0f} \quad {}^4$".format(self.Ix, unit), 
+                        (xo,yo-dy*5), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$I_y = {:,.0f} \quad {}^4$".format(self.Iy, unit), 
+                        (xo,yo-dy*6), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$S_{{x,top}} = {:,.0f} \quad {}^3$".format(self.Sx1, unit), 
+                        (xo,yo-dy*7), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$S_{{x,bottom}} = {:,.0f} \quad {}^3$".format(self.Sx2, unit), 
+                        (xo,yo-dy*8), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$S_{{y,right}} = {:,.0f} \quad {}^3$".format(self.Sy1, unit), 
+                        (xo,yo-dy*9), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$S_{{y,left}} = {:,.0f} \quad {}^3$".format(self.Sy2, unit), 
+                        (xo,yo-dy*10), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        
+        axs[0].annotate("Applied Loading", 
+                        (xo-0.03,yo-dy*11), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$M_{{x}} = {:.1f} \quad k.in$".format(self.Mx), 
+                        (xo,yo-dy*12), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$M_{{y}} = {:.1f} \quad k.in$".format(self.My), 
+                        (xo,yo-dy*13), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$\gamma_{{vx}} = {:.2f}$".format(self.gamma_vx), 
+                        (xo,yo-dy*14), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$\gamma_{{vy}} = {:.2f}$".format(self.gamma_vy), 
+                        (xo,yo-dy*15), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$Pe_{{x}} = {:.1f} \quad k.in$".format(self.Pex), 
+                        (xo,yo-dy*16), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$Pe_{{y}} = {:.1f} \quad k.in$".format(self.Pey), 
+                        (xo,yo-dy*17), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$P_{{design}} = {:.1f} \quad kips$".format(self.P), 
+                        (xo,yo-dy*18), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$M_{{x,design}} = {:.1f} \quad k.in$".format(self.Mx_final), 
+                        (xo,yo-dy*19), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$M_{{y,design}} = {:.1f} \quad k.in$".format(self.My_final), 
+                        (xo,yo-dy*20), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        
+        
+        # warning message if not about principal orientation
+        if abs(self.theta_p) > 0.1:
+            axs[1].annotate("WARNING: Perimeter is not in principal orientation.\nResult above is not in equilibrium.", 
+                            (0.05,0.07),xycoords='axes fraction', fontsize=12, va="top", ha="left", color="darkred", wrap=True)
+        
+        
+        # styling
+        axs[1].set_aspect('equal', 'datalim')
+        fig.suptitle("Punching Shear Analysis Results (psi)", fontweight="bold", fontsize=16)
+        axs[1].set_axisbelow(True)
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        axs[1].grid(linestyle='--')
+        plt.tight_layout()
+        
+        return fig
+    
+    
+    
+    def plot_results_3D(self, colormap="jet", cmin="auto", cmax="auto", scale="auto"):
         """
         Use plotly to generate an interactive plot.
         
@@ -1180,28 +1394,35 @@ class PunchingShearSection:
             colormap        (OPTIONAL) str:: colormap used to plot stress contour. I like jet and turbo. https://plotly.com/python/builtin-colorscales/
             cmin            (OPTIONAL) str or float:: minimum shear stress for contour (psi). Default = "auto".
             cmax            (OPTIONAL) str or float:: maximum shear stress for contour (psi). Default = "auto".
+            scale           (OPTIONAL) float:: used to adjust size of stress contour. Default auto-calculated such that max length of vector is 10.
         
         Returns:
             a plotly figure object
-        """     
-        # initialize a plotly figure with 2 subplots
+        """
+        
+        #################################################
+        # INITIALIZE PLOT
+        #################################################
         fig = make_subplots(rows=2, cols=2,
                             subplot_titles=("Shear Perimeter Properties", "Vector Plot", "Applied Loading"),
                             column_widths=[0.3, 0.7],
-                            row_heights=[0.65, 0.35],
+                            row_heights=[0.55, 0.45],
                             horizontal_spacing=0.02,
-                            vertical_spacing=0.05,
+                            vertical_spacing=0.01,
                             specs = [[{"type":"table"}, {"type":"scene","rowspan":2}],
                                      [{"type":"table"}, None],
                                      ])
         
-        # properties table
+        #################################################
+        # TABLES
+        #################################################
+        # perimeter properties table
         table_properties = [r"$x_{{cg}}$",
                      r"$y_{{cg}}$",
                      r"$b_o$",
                      r"$A$",
-                     r"$J_{x}$",
-                     r"$J_{y}$",
+                     r"$I_{x}$",
+                     r"$I_{y}$",
                      r"$S_{{x,top}}$",
                      r"$S_{{x,bottom}}$",
                      r"$S_{{y,right}}$",
@@ -1229,27 +1450,26 @@ class PunchingShearSection:
                                   cells_fill_color = "white",
                                   cells_align = "center",
                                   cells_font_size = 22,
-                                  cells_height = 34,
-                                  )
+                                  cells_height = 34)
         fig.add_trace(property_table, row=1, col=1)
         
         # applied force table
-        table_properties = [r"$P$",
-                            r"$M_x$",
+        table_properties = [r"$M_x$",
                             r"$M_y$",
-                            r"$\gamma_v$",
-                            r"$P_{{ex}}$",
-                            r"$P_{{ey}}$",
-                            r"$\gamma_v(M_x + P_{{ey}})$",
-                            r"$\gamma_v(M_y + P_{{ex}})$"
-                            ]
-        
-        table_values = [r"${:.1f} \quad kips$".format(self.P),
-                        r"${:.1f} \quad k.in$".format(self.Mx),
+                            r"$\gamma_{{vx}}$",
+                            r"$\gamma_{{vy}}$",
+                            r"$Pe_x$",
+                            r"$Pe_y$",
+                            r"$P_{{design}}$",
+                            r"$M_{{x,design}}$",
+                            r"$M_{{y,design}}$"]
+        table_values = [r"${:.1f} \quad k.in$".format(self.Mx),
                         r"${:.1f} \quad k.in$".format(self.My),
-                        r"${:.2f}$".format(self.gamma_v),
+                        r"${:.2f}$".format(self.gamma_vx),
+                        r"${:.2f}$".format(self.gamma_vy),
                         r"${:.1f} \quad k.in$".format(self.Pex),
                         r"${:.1f} \quad k.in$".format(self.Pey),
+                        r"${:.1f} \quad kips$".format(self.P),
                         r"${:.1f} \quad k.in$".format(self.Mx_final),
                         r"${:.1f} \quad k.in$".format(self.My_final)]
         property_table = go.Table(header_values = ['Applied Load', 'Value'],
@@ -1265,11 +1485,176 @@ class PunchingShearSection:
                                   cells_fill_color = "white",
                                   cells_align = "center",
                                   cells_font_size = 22,
-                                  cells_height = 34,
-                                  )
+                                  cells_height = 34)
         fig.add_trace(property_table, row=2, col=1)
         
         
+        
+        #################################################
+        # VECTOR PLOTS
+        #################################################
+        # prep colormap and vector length
+        cm = plt.get_cmap(colormap)
+        magnitude = [v*1000 for v in self.df_perimeter["v_total"]]
+        cmin = min(magnitude) if cmin == "auto" else cmin
+        cmax = max(magnitude) if cmax == "auto" else cmax
+        if math.isclose(cmax-cmin, 0):
+            cmin = 0
+        if scale == "auto":
+            scale = 10/cmax
+            
+        # plot shear stress quiver contour
+        x_lines = []
+        y_lines = []
+        z_lines = []
+        base_dot = [[],[],[]]
+        tip_dot = [[],[],[]]
+        line_colors = []
+        hover_text = []
+        LENGTH_SF = scale
+        for i in range(len(self.df_perimeter["x_centroid"])):
+            # first point (on Z=0 plane)
+            x0 = self.df_perimeter["x_centroid"][i]
+            y0 = self.df_perimeter["y_centroid"][i]
+            z0 = 0
+            xyz0_array = np.array([x0,y0,z0])
+            
+            # second point
+            u = 0
+            v = 0
+            w = magnitude[i]
+            uvw_array = np.array([u,v,w])
+            xyz1_array = xyz0_array + LENGTH_SF * uvw_array
+            
+            # add to list of plot lines
+            x_lines.extend([xyz0_array[0], xyz1_array[0], None])
+            y_lines.extend([xyz0_array[1], xyz1_array[1], None])
+            z_lines.extend([xyz0_array[2], xyz1_array[2], None])
+            
+            # add to list of base point
+            base_dot[0].append(xyz0_array[0])
+            base_dot[1].append(xyz0_array[1])
+            base_dot[2].append(xyz0_array[2])
+            
+            # add to list of tip point
+            tip_dot[0].append(xyz1_array[0])
+            tip_dot[1].append(xyz1_array[1])
+            tip_dot[2].append(xyz1_array[2])
+            
+            # add to list of colors
+            magnitude_normalized = (w-cmin)/(cmax-cmin)
+            rgb01 = cm(magnitude_normalized)
+            rgb255 = [a * 255 for a in rgb01]
+            rgb_str = f"rgb({rgb255[0]},{rgb255[1]},{rgb255[2]})"
+            line_colors.append(rgb_str)
+            line_colors.append(rgb_str)
+            line_colors.append("white")
+            
+            # add to list of hoverinfo
+            custom_hover = 'V_axial: {:.1f} psi<br>'.format(self.df_perimeter["v_axial"][i]*1000) +\
+                'V_Mx: {:.1f} psi<br>'.format(self.df_perimeter["v_Mx"][i]*1000) +\
+                'V_My: {:.1f} psi<br>'.format(self.df_perimeter["v_My"][i]*1000) +\
+                '<b>V_total: {:.1f} psi</b><br>'.format(w)
+            hover_text.append(custom_hover)
+        
+        # prep work before plotting vectors
+        hovertemplate = 'coord: (%{x:.1f}, %{y:.1f}, %{z:.1f})<br>' + '%{text}<extra></extra>'
+        tick_interval = np.linspace(cmin, cmax, 9)
+        tick_interval_str = [f"{x:.2f}" for x in tick_interval]
+        
+        # plot vectors
+        vector_line = go.Scatter3d(x=x_lines,
+                                      y=y_lines,
+                                      z=z_lines,
+                                      mode='lines',
+                                      line_width = 8,
+                                      line_color = line_colors,
+                                      showlegend = False,
+                                      hoverinfo="none")
+        
+        vector_tip = go.Scatter3d(x=tip_dot[0],
+                                      y=tip_dot[1],
+                                      z=tip_dot[2],
+                                      mode='markers',
+                                      marker_size = 12,
+                                      showlegend = False,
+                                      hovertemplate = hovertemplate,
+                                      text = hover_text,
+                                      hoverlabel_font_size=16,
+                                      marker_color=magnitude,
+                                      opacity=0,
+                                      marker_colorscale=colormap)
+        
+        vector_base = go.Scatter3d(x=base_dot[0],
+                                      y=base_dot[1],
+                                      z=base_dot[2],
+                                      mode='markers',
+                                      marker_symbol = "square",
+                                      marker_size = 6,
+                                      showlegend = False,
+                                      hovertemplate = hovertemplate,
+                                      text = hover_text,
+                                      hoverlabel_font_size=16,
+                                      marker_color=magnitude,
+                                      marker_colorscale=colormap,
+                                      marker_showscale=True,
+                                      marker_colorbar=dict(title_text="psi",
+                                                           outlinecolor="black",
+                                                           outlinewidth=2,
+                                                           tickvals=tick_interval,
+                                                           ticktext=tick_interval_str,
+                                                           xpad=40,
+                                                           ypad=40)
+                                      )
+        fig.add_trace(vector_base, row=1, col=2)
+        fig.add_trace(vector_tip, row=1, col=2)
+        fig.add_trace(vector_line, row=1, col=2)
+        
+        
+        #################################################
+        # PLOT COLUMN AND STUDRAILS
+        #################################################
+        # plot studrails
+        if len(self.studrail_pts) != 0:
+            x_studrail = []
+            y_studrail = []
+            z_studrail = []
+            for i in range(len(self.studrail_pts)):
+                pt1 = self.studrail_pts[i][0]
+                pt2 = self.studrail_pts[i][1]
+                x_studrail.extend([pt1[0], pt2[0], None])
+                y_studrail.extend([pt1[1], pt2[1], None])
+                z_studrail.extend([0, 0, None])
+            studrail_line = go.Scatter3d(x=x_studrail,
+                                          y=y_studrail,
+                                          z=z_studrail,
+                                          mode='lines',
+                                          line_width = 12,
+                                          line_color = "gray",
+                                          showlegend = False,
+                                          hoverinfo="none")
+            fig.add_trace(studrail_line, row=1, col=2)
+        
+        # plot column (two triangles)
+        pt1 = np.append(self.col_pts[0],0)
+        pt2 = np.append(self.col_pts[1],0)
+        pt3 = np.append(self.col_pts[2],0)
+        pt4 = np.append(self.col_pts[3],0)
+        mesh_xyz = np.array([pt1,pt2,pt3,pt4])
+        col_mesh = go.Mesh3d(x = mesh_xyz[:,0],
+                             y = mesh_xyz[:,1],
+                             z = mesh_xyz[:,2],
+                             i = [0,1],
+                             j = [1,2],
+                             k = [3,3],
+                             color = "darkgray",
+                             showlegend = False,
+                             hoverinfo="none")
+        fig.add_trace(col_mesh, row=1, col=2)
+        
+        #################################################
+        # STYLING AND ORIGIN MARKER
+        #################################################
         # plot orgin marker at centroid of perimeter
         xmax = max(self.perimeter["x_centroid"])
         xmin = min(self.perimeter["x_centroid"])
@@ -1309,7 +1694,7 @@ class PunchingShearSection:
         Z = go.Scatter3d(
             x=[self.x_centroid, self.x_centroid],
             y=[self.y_centroid, self.y_centroid],
-            z=[0, 0 + self.slab_depth/3],
+            z=[0, 0 + dmax/14],
             mode='lines+text',
             hoverinfo = 'skip',
             line=dict(color='green', width=5),
@@ -1321,40 +1706,11 @@ class PunchingShearSection:
                 size=14,
                 color="green"))
         fig.add_trace(Z, row=1, col=2)
-        
-        
-        # plot shear stress quiver contour
-        cmin = min(self.df_perimeter["v_total"])*1000 if cmin == "auto" else cmin*1000
-        cmax = max(self.df_perimeter["v_total"])*1000 if cmax == "auto" else cmax*1000
-        if math.isclose(cmax-cmin, 0):
-            cmin = 0
-        sizeref = abs(6/cmax) # fixes arrow scaling issues
-        # need to use sizemode raw which is not available on older versions of plotly
-        custom_hover = '<b>x</b>: %{x:.1f} in<br>' +\
-            '<b>y</b>: %{y:.1f} in<br>' +\
-            '<b>stress</b>: %{w:.1f} psi<br>'
-        cone_plot = go.Cone(x = self.df_perimeter["x_centroid"],
-                            y = self.df_perimeter["y_centroid"],
-                            z = [0] * len(self.df_perimeter["y_centroid"]),
-                            u = [0] * len(self.df_perimeter["v_total"]),
-                            v = [0] * len(self.df_perimeter["v_total"]),
-                            w = [a*1000 for a in self.df_perimeter["v_total"]],
-                            colorbar_title_text="(psi)",
-                            hovertemplate = custom_hover,
-                            hoverlabel_font_size=16,
-                            colorscale=colormap,
-                            cmin=cmin,
-                            cmax=cmax,
-                            sizemode = "raw",
-                            sizeref = sizeref)
-        fig.add_trace(cone_plot, row=1, col=2)
-        
-
         # change such that axes are in proportion.
         fig.update_scenes(aspectmode="data")
         
         # add title
-        fig.update_layout(title="<b>Punching Shear Analysis Result Summary</b>",
+        fig.update_layout(title="<b>Punching Shear Analysis Results</b>",
                           title_xanchor="center",
                           title_font_size=22,
                           title_x=0.5, 
@@ -1377,8 +1733,7 @@ class PunchingShearSection:
                           yaxis_gridcolor="grey",
                           xaxis_gridwidth=0.5,
                           yaxis_gridwidth=0.5,
-                          zaxis_visible=False,
-                          )
+                          zaxis_visible=False)
         fig.show()
         return fig
 

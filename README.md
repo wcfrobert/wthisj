@@ -9,7 +9,7 @@
 
 
 <div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/preview.png?raw=true" alt="demo" style="width: 80%;" />
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/demo.gif?raw=true" alt="demo" style="width: 85%;" />
 </div>
 
 

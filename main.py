@@ -4,10 +4,7 @@ import wthisj
 column1 = wthisj.PunchingShearSection(width = 24,
                                       height = 24,
                                       slab_depth = 12,
-                                      condition = "NW",
-                                      overhang_x = 12,
-                                      overhang_y = 12,
-                                      L_studrail = 36)
+                                      condition = "I")
 # preview geometry
 column1.preview()
 
