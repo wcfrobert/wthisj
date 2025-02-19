@@ -1093,6 +1093,8 @@ class PunchingShearSection:
         # for corner condition, gamma_v is calculated in the rotated principal orientation
         if self.has_studrail:
             if self.condition == "NW" or self.condition == "NE" or self.condition == "SW" or self.condition == "SE":
+                lx = max([xi for xi in self.perimeter["x_centroid"]]) - min([xi for xi in self.perimeter["x_centroid"]])
+                ly = max([yi for yi in self.perimeter["y_centroid"]]) - min([yi for yi in self.perimeter["y_centroid"]])
                 if ly > lx:
                     g_vx = 0.4
                     g_vy = 1 - (1 / (1 + (2/3)*math.sqrt(lx/ly) - 0.2)) if lx/ly > 0.2 else 0
@@ -1166,7 +1168,7 @@ class PunchingShearSection:
                 if auto_rotate:
                     print("\t\t Rotating geometry by {:.1f} deg".format(required_rotation))
                     print("\t\t\t Done!")
-                    print("\t\t Rotating applied moment by {:.1f} deg".format(required_rotation))
+                    print("\t\t Calculating applied moment about new basis")
                     print("\t\t\t Before: (Mx, My) = ({:.1f} k.in,  {:.1f} k.in)".format(M_vec[0], M_vec[1]))
                     print("\t\t\t After: (Mx, My) = ({:.1f} k.in,  {:.1f} k.in)".format(M_vec_rotated[0], M_vec_rotated[1]))
                 else:
@@ -1260,10 +1262,10 @@ class PunchingShearSection:
             
             # add patch to plot
             axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor=colors[i],
-                                          alpha=1, edgecolor=colors[i], zorder=1, lw=0.5))
+                                          alpha=1, edgecolor=colors[i], zorder=3, lw=0.5))
             
         # add a colorbar on the side
-        tick_values = np.linspace(cmin,cmax,6)
+        tick_values = np.linspace(cmin,cmax,9)
         norm = mcolors.Normalize(vmin=cmin, vmax=cmax)
         fig.colorbar(mcm.ScalarMappable(norm=norm, cmap=cm), 
                      orientation='vertical',
@@ -1315,6 +1317,27 @@ class PunchingShearSection:
         
         # plot Cog
         axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="darkblue",markersize=6, zorder=3, linestyle="none")
+        
+        # freeze axis range, then plot slab edge
+        axs[1].set_aspect('equal', 'datalim')
+        axs[1].set_xlim(axs[1].get_xlim())
+        axs[1].set_ylim(axs[1].get_ylim())
+        if self.condition == "I":
+            axs[1].set_facecolor((0.77, 0.77, 0.77, 0.45))
+        else:
+            if len(self.slabedge_lines) != 0:
+                for i in range(len(self.slabedge_lines)):
+                    pt1 = self.slabedge_lines[i][0]
+                    pt2 = self.slabedge_lines[i][1]
+                    axs[1].plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], marker="none", c="black", zorder=2, linestyle="-")
+            if len(self.slabedge_pts) != 0:
+                pt1 = np.array(self.slabedge_pts[0])
+                pt2 = np.array(self.slabedge_pts[1])
+                pt3 = np.array(self.slabedge_pts[2])
+                pt4 = np.array(self.slabedge_pts[3])
+                vertices = [pt1, pt2, pt3, pt4, pt1]
+                axs[1].add_patch(patches.Polygon(np.array(vertices), closed=True, facecolor=(0.77, 0.77, 0.77, 0.45),
+                                              alpha=0.45, edgecolor=(0.77, 0.77, 0.77, 0.45), zorder=1, lw=2, linestyle="--"))
         
 
         # annotation for perimeter properties
@@ -1372,9 +1395,7 @@ class PunchingShearSection:
             axs[1].annotate("WARNING: Perimeter is not in principal orientation.\nResult above is not in equilibrium.", 
                             (0.05,0.07),xycoords='axes fraction', fontsize=12, va="top", ha="left", color="darkred", wrap=True)
         
-        
         # styling
-        axs[1].set_aspect('equal', 'datalim')
         fig.suptitle("Punching Shear Analysis Results (psi)", fontweight="bold", fontsize=16)
         axs[1].set_axisbelow(True)
         axs[0].set_xticks([])
@@ -1386,7 +1407,7 @@ class PunchingShearSection:
     
     
     
-    def plot_results_3D(self, colormap="jet", cmin="auto", cmax="auto", scale="auto"):
+    def plot_results_3D(self, colormap="jet", cmin="auto", cmax="auto", scale=10):
         """
         Use plotly to generate an interactive plot.
         
@@ -1394,7 +1415,7 @@ class PunchingShearSection:
             colormap        (OPTIONAL) str:: colormap used to plot stress contour. I like jet and turbo. https://plotly.com/python/builtin-colorscales/
             cmin            (OPTIONAL) str or float:: minimum shear stress for contour (psi). Default = "auto".
             cmax            (OPTIONAL) str or float:: maximum shear stress for contour (psi). Default = "auto".
-            scale           (OPTIONAL) float:: used to adjust size of stress contour. Default auto-calculated such that max length of vector is 10.
+            scale           (OPTIONAL) float:: used to adjust size of vector plot. Default = 10.
         
         Returns:
             a plotly figure object
@@ -1499,9 +1520,8 @@ class PunchingShearSection:
         cmin = min(magnitude) if cmin == "auto" else cmin
         cmax = max(magnitude) if cmax == "auto" else cmax
         if math.isclose(cmax-cmin, 0):
-            cmin = 0
-        if scale == "auto":
-            scale = 10/cmax
+            cmin = cmin - 1
+            cmax - cmax + 1
             
         # plot shear stress quiver contour
         x_lines = []
@@ -1510,8 +1530,9 @@ class PunchingShearSection:
         base_dot = [[],[],[]]
         tip_dot = [[],[],[]]
         line_colors = []
+        dot_colors = []
         hover_text = []
-        LENGTH_SF = scale
+        LENGTH_SF = scale/cmax
         for i in range(len(self.df_perimeter["x_centroid"])):
             # first point (on Z=0 plane)
             x0 = self.df_perimeter["x_centroid"][i]
@@ -1549,6 +1570,7 @@ class PunchingShearSection:
             line_colors.append(rgb_str)
             line_colors.append(rgb_str)
             line_colors.append("white")
+            dot_colors.append(rgb_str)
             
             # add to list of hoverinfo
             custom_hover = 'V_axial: {:.1f} psi<br>'.format(self.df_perimeter["v_axial"][i]*1000) +\
@@ -1561,7 +1583,24 @@ class PunchingShearSection:
         hovertemplate = 'coord: (%{x:.1f}, %{y:.1f}, %{z:.1f})<br>' + '%{text}<extra></extra>'
         tick_interval = np.linspace(cmin, cmax, 9)
         tick_interval_str = [f"{x:.2f}" for x in tick_interval]
-        
+        dot_for_colorbar = go.Scatter3d(x=[0],
+                                      y=[0],
+                                      z=[0],
+                                      mode='markers',
+                                      showlegend = False,
+                                      opacity=0,
+                                      marker_colorscale=colormap,
+                                      marker_showscale=True,
+                                      marker_cmin = cmin,
+                                      marker_cmax = cmax,
+                                      marker_color="rgba(255, 255, 255, 0)",
+                                      marker_colorbar=dict(title_text="psi",
+                                                           outlinecolor="black",
+                                                           outlinewidth=2,
+                                                           tickvals=tick_interval,
+                                                           ticktext=tick_interval_str,
+                                                           xpad=40,
+                                                           ypad=40))
         # plot vectors
         vector_line = go.Scatter3d(x=x_lines,
                                       y=y_lines,
@@ -1571,7 +1610,6 @@ class PunchingShearSection:
                                       line_color = line_colors,
                                       showlegend = False,
                                       hoverinfo="none")
-        
         vector_tip = go.Scatter3d(x=tip_dot[0],
                                       y=tip_dot[1],
                                       z=tip_dot[2],
@@ -1581,10 +1619,8 @@ class PunchingShearSection:
                                       hovertemplate = hovertemplate,
                                       text = hover_text,
                                       hoverlabel_font_size=16,
-                                      marker_color=magnitude,
-                                      opacity=0,
-                                      marker_colorscale=colormap)
-        
+                                      marker_color=dot_colors,
+                                      opacity = 0,)
         vector_base = go.Scatter3d(x=base_dot[0],
                                       y=base_dot[1],
                                       z=base_dot[2],
@@ -1595,20 +1631,12 @@ class PunchingShearSection:
                                       hovertemplate = hovertemplate,
                                       text = hover_text,
                                       hoverlabel_font_size=16,
-                                      marker_color=magnitude,
-                                      marker_colorscale=colormap,
-                                      marker_showscale=True,
-                                      marker_colorbar=dict(title_text="psi",
-                                                           outlinecolor="black",
-                                                           outlinewidth=2,
-                                                           tickvals=tick_interval,
-                                                           ticktext=tick_interval_str,
-                                                           xpad=40,
-                                                           ypad=40)
+                                      marker_color=dot_colors,
                                       )
         fig.add_trace(vector_base, row=1, col=2)
         fig.add_trace(vector_tip, row=1, col=2)
         fig.add_trace(vector_line, row=1, col=2)
+        fig.add_trace(dot_for_colorbar, row=1, col=2)
         
         
         #################################################
