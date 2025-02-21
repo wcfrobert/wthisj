@@ -943,7 +943,7 @@ class PunchingShearSection:
         
         Args:
             P (float): 
-                Applied shear force in KIPS.
+                Applied shear force in KIPS. Should be positive unless you have a hanger column!
                 
             Mx (float): 
                 Applied moment about the X-axis in KIP.IN.
@@ -1108,8 +1108,8 @@ class PunchingShearSection:
         
         # calculate Pe moment if applicable
         if consider_Pe:
-            Pex = -P * self.x_centroid # there is a right-hand rule sign flip here
-            Pey = P * self.y_centroid
+            Pex = P * self.x_centroid
+            Pey = - P * self.y_centroid # i think there is a right-hand rule flip here.
         else:
             Pex = 0
             Pey = 0
@@ -1128,13 +1128,17 @@ class PunchingShearSection:
         for i in range(N_patches):
             dx = self.perimeter["x_centroid"][i] - self.x_centroid
             dy = self.perimeter["y_centroid"][i] - self.y_centroid
-            v_axial = - self.P / self.A
+            
+            # elastic method calculation
+            v_axial = -self.P / self.A
             v_Mx = -self.Mx_final * dy / self.Ix
             v_My = self.My_final * dx / self.Iy
             v_total = v_axial + v_Mx + v_My
             Fz = v_total * self.perimeter["area"][i]
             Mxi = Fz * dy
             Myi = -Fz * dx
+            
+            # save results
             self.perimeter["v_axial"].append(v_axial)
             self.perimeter["v_Mx"].append(v_Mx)
             self.perimeter["v_My"].append(v_My)
@@ -1166,11 +1170,8 @@ class PunchingShearSection:
             print("1. Rotate to principal orientation...")
             if abs(required_rotation) > 0.1:
                 if auto_rotate:
-                    print("\t\t Rotating geometry by {:.1f} deg".format(required_rotation))
+                    print("\t\t Rotating geometry and applied moment by {:.1f} deg".format(required_rotation))
                     print("\t\t\t Done!")
-                    print("\t\t Calculating applied moment about new basis")
-                    print("\t\t\t Before: (Mx, My) = ({:.1f} k.in,  {:.1f} k.in)".format(M_vec[0], M_vec[1]))
-                    print("\t\t\t After: (Mx, My) = ({:.1f} k.in,  {:.1f} k.in)".format(M_vec_rotated[0], M_vec_rotated[1]))
                 else:
                     print("\t\t WARNING: Auto rotation is disabled. Perimeter is NOT in its principal orientation")
                     print("\t\t WARNING: Equilibrium check will fail unless geometry is rotated by {:.1f} deg.".format(required_rotation))
@@ -1205,6 +1206,9 @@ class PunchingShearSection:
             print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("Mx", self.Mx_final, sumMx, residual_Mx, flag_Mx))
             print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("My", self.My_final, sumMy, residual_My, flag_My))
             elaspsed_time = (time.time() - time_start) * 1000
+            if abs(required_rotation) > 0.1 and not auto_rotate:
+                print("WARNING: Auto rotation is disabled. Perimeter is NOT in its principal orientation")
+                print("WARNING: Equilibrium check will fail unless geometry is rotated by {:.1f} deg.".format(required_rotation))
             print(f"Analysis completed in {elaspsed_time:.0f} ms.")
                   
         return self.df_perimeter
@@ -1392,7 +1396,7 @@ class PunchingShearSection:
         
         # warning message if not about principal orientation
         if abs(self.theta_p) > 0.1:
-            axs[1].annotate("WARNING: Perimeter is not in principal orientation.\nResult above is not in equilibrium.", 
+            axs[1].annotate("WARNING: Perimeter is not in principal orientation.\nResult above may not be in equilibrium.", 
                             (0.05,0.07),xycoords='axes fraction', fontsize=12, va="top", ha="left", color="darkred", wrap=True)
         
         # styling
@@ -1516,7 +1520,7 @@ class PunchingShearSection:
         #################################################
         # prep colormap and vector length
         cm = plt.get_cmap(colormap)
-        magnitude = [v*1000 for v in self.df_perimeter["v_total"]]
+        magnitude = [v*1000 for v in self.perimeter["v_total"]] # convert to psi
         cmin = min(magnitude) if cmin == "auto" else cmin
         cmax = max(magnitude) if cmax == "auto" else cmax
         if math.isclose(cmax-cmin, 0):
@@ -1532,11 +1536,11 @@ class PunchingShearSection:
         line_colors = []
         dot_colors = []
         hover_text = []
-        LENGTH_SF = scale/cmax
-        for i in range(len(self.df_perimeter["x_centroid"])):
+        LENGTH_SF = scale/max(abs(cmax), abs(cmin))
+        for i in range(len(self.perimeter["x_centroid"])):
             # first point (on Z=0 plane)
-            x0 = self.df_perimeter["x_centroid"][i]
-            y0 = self.df_perimeter["y_centroid"][i]
+            x0 = self.perimeter["x_centroid"][i]
+            y0 = self.perimeter["y_centroid"][i]
             z0 = 0
             xyz0_array = np.array([x0,y0,z0])
             
@@ -1573,9 +1577,9 @@ class PunchingShearSection:
             dot_colors.append(rgb_str)
             
             # add to list of hoverinfo
-            custom_hover = 'V_axial: {:.1f} psi<br>'.format(self.df_perimeter["v_axial"][i]*1000) +\
-                'V_Mx: {:.1f} psi<br>'.format(self.df_perimeter["v_Mx"][i]*1000) +\
-                'V_My: {:.1f} psi<br>'.format(self.df_perimeter["v_My"][i]*1000) +\
+            custom_hover = 'V_axial: {:.1f} psi<br>'.format(self.perimeter["v_axial"][i]*1000) +\
+                'V_Mx: {:.1f} psi<br>'.format(self.perimeter["v_Mx"][i]*1000) +\
+                'V_My: {:.1f} psi<br>'.format(self.perimeter["v_My"][i]*1000) +\
                 '<b>V_total: {:.1f} psi</b><br>'.format(w)
             hover_text.append(custom_hover)
         

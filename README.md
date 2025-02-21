@@ -2,7 +2,7 @@
   <br>
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/logo.png?raw=true" alt="logo" style="width: 60%;" />
   <br>
-  Concrete Slab Punching Shear Calculation in Python (WORK IN PROGRESS)
+  Concrete Slab Punching Shear Calculation In Python
   <br>
 </h1>
 
@@ -13,13 +13,18 @@
 </div>
 
 
-
+- [Introduction](#introduction)
 - [Quick Start](#quick-start)
+- [Validation Problems](#validation-problems)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Theoretical Background](#theoretical-background)
 - [Assumptions and Limitations](#assumptions-and-limitations)
 - [License](#license)
+
+
+## Introduction
+
 
 
 
@@ -31,39 +36,63 @@ Run main.py:
 ```python
 import wthisj
 
-# initialize a column perimeter - corner condition with studrails
+# initialize a column perimeter
 column1 = wthisj.PunchingShearSection(width = 24,
                                       height = 24,
                                       slab_depth = 12,
-                                      condition = "NW",
+                                      condition = "W",
                                       overhang_x = 12,
-                                      overhang_y = 12,
+                                      overhang_y = 0,
                                       L_studrail = 36)
+
+# add openings
+column1.add_opening(dx=10, dy=-100, width=48, height=36)
+column1.add_opening(dx=80, dy=0, width=12, height=12)
+
 # preview geometry
 column1.preview()
 
 # calculate punching shear stress
-results = column1.solve(P = 100, Mx = 500, My = 90)
+results = column1.solve(P = 100,
+                        Mx = -400,
+                        My = -400,
+                        consider_Pe=False,
+                        auto_rotate=False, 
+                        verbose=True)
 
-# generate 2D plot with matplotlib
+# plot results
 column1.plot_results()
-
-# generate interactive 3D plot with plotly
 column1.plot_results_3D()
 ```
 
 `PunchingShearSection.preview()`
 
+<div align="center">
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/preview.png?raw=true" alt="fig" style="width: 70%;" />
+</div>
+
 `PunchingShearSection.solve()`
+
+<div align="center">
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve.png?raw=true" alt="fig" style="width: 70%;" />
+</div>
 
 `PunchingShearSection.plot_results()`
 
+<div align="center">
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/results.png?raw=true" alt="fig" style="width: 70%;" />
+</div>
+
 `PunchingShearSection.plot_results_3D()`
 
+<div align="center">
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/demo.gif?raw=true" alt="fig" style="width: 70%;" />
+</div>
 
 
+## Validation Problems
 
-
+TODO
 
 
 
