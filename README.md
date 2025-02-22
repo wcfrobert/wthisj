@@ -2,7 +2,7 @@
   <br>
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/logo.png?raw=true" alt="logo" style="width: 60%;" />
   <br>
-  Concrete Slab Punching Shear Calculation In Python
+  Punching Shear Calculation In Python
   <br>
 </h1>
 
@@ -25,13 +25,36 @@
 
 ## Introduction
 
+**wthisj** (what the heck is j?) is a python program that performs punching shear calculations for concrete flat slab design. It does so using the elastic method along with concepts described in <u>ACI 318</u> and <u>ACI 421.1R</u>. Refer to the [theoretical background](#theoretical-background) section for more info. Notable features include:
 
+* Supports all column conditions (**interior, edge, and corner**)
+* Supports column with **stud rails** (i.e. polygonal shear perimeters)
+* Consideration of nearby **openings**
+* Interactive **result visualization**
+* Quickly preview **geometric properties** ($b_o$, $J$, $\gamma_v$, etc)
+* Ability to rotate section to principal orientation
+* Consideration of moment induced by eccentricity between column and centroid of critical shear perimeter
 
-
+Try it out yourself!
 
 ## Quick Start
 
-Run main.py:
+Here's the minimum viable script. Define a shear perimeter, run analysis, visualize results in 3 lines of python code. 
+
+``` python
+import wthisj
+
+# initialize a column perimeter
+column1 = wthisj.PunchingShearSection(width = 24, height = 24, slab_depth = 12, condition = "I")
+
+# calculate punching shear stress
+results = column1.solve(P = 100, Mx = -400, My = -400)
+
+# plot results (plotly)
+column1.plot_results_3D()
+```
+
+Here is a more comprehensive getting-started script (main.py):
 
 ```python
 import wthisj
@@ -47,7 +70,6 @@ column1 = wthisj.PunchingShearSection(width = 24,
 
 # add openings
 column1.add_opening(dx=80, dy=-10, width=18, height=20)
-
 
 # preview geometry
 column1.preview()
@@ -67,25 +89,25 @@ column1.plot_results()
 column1.plot_results_3D()
 ```
 
-`PunchingShearSection.preview()`
+* `PunchingShearSection.preview()` plots a preview of the critical shear perimeter along with all of its geometric properties.
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/preview.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
 
-`PunchingShearSection.solve()`
+* `PunchingShearSection.solve()` runs an analysis and returns a result dataframe. The section is discretized numerically into many fibers, each row represents one fiber.
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
 
-`PunchingShearSection.plot_results()`
+* `PunchingShearSection.plot_results()` plots the shear stress contour + a short calculation summary.
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/results.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
 
-`PunchingShearSection.plot_results_3D()`
+* `PunchingShearSection.plot_results_3D()` plots the shear stress contour in an interactive 3D environment using plotly.
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/demo.gif?raw=true" alt="fig" style="width: 70%;" />
@@ -161,13 +183,9 @@ Here are all the public methods available to the user:
 - `PunchingShearSection.add_opening()`
 - `PunchingShearSection.rotate()`
 
-
-
 **Run Analysis**
 
 - `PunchingShearSection.solve()`
-
-
 
 
 **Plotting Results**
