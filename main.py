@@ -10,8 +10,8 @@ column1 = wthisj.PunchingShearSection(width = 24,
                                       L_studrail = 36)
 
 # add openings
-column1.add_opening(dx=10, dy=-100, width=48, height=36)
-column1.add_opening(dx=80, dy=0, width=12, height=12)
+column1.add_opening(dx=80, dy=-10, width=18, height=20)
+
 
 # preview geometry
 column1.preview()
@@ -24,6 +24,8 @@ results = column1.solve(P = 100,
                         auto_rotate=False, 
                         verbose=True)
 
-# plot results
+# plot results (matplotlib)
 column1.plot_results()
+
+# plot results (plotly)
 column1.plot_results_3D()
