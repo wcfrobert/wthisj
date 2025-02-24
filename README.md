@@ -85,13 +85,8 @@ column1.plot_results()
 column1.plot_results_3D()
 ```
 
-Notes:
 
-* There are (9) possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions on a compass. For example, "SE" is a corner condition with slab edge below and to the right. "W" is an edge condition with edge to the left.
-  * "NW"     "N"      "NE"
-  * "W"         "I"       "E"
-  * "SW"      "S"      "SE"
-* Sign convention for the applied force follows the right-hand rule. **P should be negative** unless you are checking uplift. 
+There are (9) possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE). Sign convention for the applied force follows the right-hand rule. **P should be negative** unless you are checking uplift. 
 
 
 <div align="center">
@@ -216,16 +211,133 @@ If you need further guidance at any time, simply use the help() command to acces
 
 
 
+### `PunchingShearSection.__init__(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
+
+* width: float
+  * Column dimension along x-axis
+
+* height: float
+  * Column dimension along y-axis
+
+* slab_depth: float
+  * Slab depth from outermost compression fiber to outermost tension rebar. Use the average depth of two orthogonal slab directions.
+
+* condition: string
+  * String used to specify interior, edge, or corner column condition. Valid inputs look like the cardinal directions on a compass.
+  * "N", "S", "W", "E", "NW", "NE", "SW", "SE"
+  * For example, "NW" is a corner condition with slab edge to the top left. "W" is an edge condition with slab edge on the left.
+
+* overhang_x: float (OPTIONAL)
+  * Default = 0
+  * Slab overhang dimension along the X-axis beyond column face.
+  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition.
+
+* overhang_y: float (OPTIONAL)
+  * Default = 0
+  * Slab overhang dimension along the Y-axis beyond column face.
+  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition.
+
+* L_studrail: float (OPTIONAL)
+  * Default = 0
+  * Stud rails may be added to expand the punching shear perimeter into a polygonal pattern. The exact geometry is described in ACI 318-19. We will assume stud rails always exist at the column corners, and that a minimum of two rails exist on each face. Spacing and number of stud rails are irrelevant here because all we care about is the perimeter geometry.
+
+* auto_generate_perimeter: bool (OPTIONAL)
+  * Default = True
+  * Automatically generate the punching shear perimeter based on the arguments entered by the user above.
+  * Alternatively, the user may set this parameter to False, then draw each perimeter line manually using the `.add_perimeter()` method.
+
+* PATCH_SIZE: float (OPTIONAL)
+  * Default = 0.5
+  * By default, the shear perimeter is numerically discretized into 0.5" fibers. You can specify a smaller fiber size to improve accuracy. 0.5" is small enough for most cases.
+
+
+
+
+
+`PunchingShearSection.add_perimeter(start, end, depth)`
+
+* start: float
+  * 
+* end: float
+  * 
+* depth: float
+  * 
+
+`PunchingShearSection.add_opening(dx, dy, width, height)`
+
+* dx: float
+  * 
+* dy: float
+  * 
+* width: float
+  * 
+* height: float
+  * 
+
+`PunchingShearSection.rotate(angle)`
+
+* angle: float
+  * 
+
+### Step 2: Run Analysis
+
+`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`
+
+* RETURNS: a dataframe containing calculation results for each patch
+
+
+
+
+### Step 3: Visualization
+
+`PunchingShearSection.preview()`
+
+* RETURNS: a matplotlib figure
+
+
+
+`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
+
+RETURNS: a matplotlib figure
+
+
+
+`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
+
+RETURNS: a plotly figure (html)
+
+
+
+
+
+
 ## Theoretical Background
 
-
 TODO
+
+
+
+
+
+
+
+
+
+
 
 
 
 ## Assumptions and Limitations
 
 TODO
+
+
+
+
+
+
+
+
 
 
 
