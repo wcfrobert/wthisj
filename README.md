@@ -1,12 +1,10 @@
 <h1 align="center">
   <br>
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/logo.png?raw=true" alt="logo" style="width: 60%;" />
-  <br>
-  Punching Shear Calculation In Python
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/logo.png?raw=true" alt="logo" style="width: 50%;" />
   <br>
 </h1>
 
-
+<h3> Punching Shear Calculation in Python </h3>
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/demo.gif?raw=true" alt="demo" style="width: 100%;" />
@@ -25,13 +23,13 @@
 
 ## Introduction
 
-**wthisj** (what the heck is j?) is a python program that performs punching shear calculations for concrete slab design. It does so using the elastic method along with concepts described in <u>ACI 318</u> and <u>ACI 421.1R</u>. Refer to the [theoretical background](#theoretical-background) section for more info. Notable features include:
+**wthisj** (what the heck is j?) is a python program that performs punching shear calculations for concrete slab design. It does so using the elastic method and concepts described in <u>ACI 318</u> and <u>ACI 421.1R</u>. Refer to the [theoretical background](#theoretical-background) section for more info. Notable features include:
 
 * Supports all column conditions (**interior, edge, and corner**)
 * Ability to add **stud rails** (i.e. polygonal shear perimeters)
 * Ability to add **openings**
 * Interactive result visualization
-* Other advanced features like principal orientation rotation for corner columns, and consideration of moment induced by eccentricity between column and centroid of critical shear perimeter
+* Other advanced features like principal orientation rotation, and consideration of moment induced by eccentricity between column and centroid of critical shear perimeter
 
 ## Quick Start
 

@@ -17,7 +17,7 @@ column1 = wthisj.PunchingShearSection(width = 24,
 #column1.preview()
 
 # calculate punching shear stress
-results = column1.solve(P = -120,
+results = column1.solve(P = -20,
                         Mx = 0,
                         My = 400,
                         consider_Pe=False,
