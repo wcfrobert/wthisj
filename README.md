@@ -208,10 +208,11 @@ If you need guidance at any time, use the help() command to access method docstr
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/help.png?raw=true" alt="fig" style="width: 80%;" />
 </div>
 
+Detailed documentation below:
 
-**`PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`**
+### `PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
 
-Arguments:
+**Arguments:**
 
 * width: float
   * Column dimension along x-axis
@@ -249,11 +250,11 @@ Arguments:
   * Default = 0.5
   * By default, the shear perimeter is numerically discretized into 0.5" fibers. You can specify a smaller fiber size to improve accuracy. 0.5" is small enough for most cases.
 
-Returns:
+**Returns:**
 
 * None
 
-Example:
+**Example:**
 
 
 ```python
@@ -269,7 +270,11 @@ column1 = wthisj.PunchingShearSection(width = 24,
 ```
 
 
-**`PunchingShearSection.add_perimeter(start, end, depth)`** - Draw a shear perimeter line. This is an advanced feature. Most users would not need to use this.
+### `PunchingShearSection.add_perimeter(start, end, depth)`
+
+Draw a shear perimeter line. This is an advanced feature. Most users would not need to use this.
+
+**Arguments:**
 
 * start: [float]
   * [x, y] coordinate of the start point
@@ -277,6 +282,12 @@ column1 = wthisj.PunchingShearSection(width = 24,
   * [x, y] coordinate of the end point
 * depth: float
   * slab depth along this line
+
+**Returns:**
+
+
+
+**Example:**
 
 ```python
 # define a 18" x 18" column, but turn auto-generate perimeter off
@@ -294,7 +305,9 @@ column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
 ```
 
 
-**`PunchingShearSection.add_opening(dx, dy, width, height)`**
+### `PunchingShearSection.add_opening(dx, dy, width, height)`
+
+**Arguments:**
 
 * dx: float
   * x-offset from column center (0,0) to the bottom left corner of opening
@@ -305,16 +318,32 @@ column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
 * height: float
   * opening height
 
+**Returns:**
+
+
+
+**Example:**
+
 ```python
 # add a 18" x 20" opening with bottom-left corner located 80" left and 10" below the column center.
 column1.add_opening(dx=80, dy=-10, width=18, height=20)
 ```
 
 
-**`PunchingShearSection.rotate(angle)`** - Rotate the section by a specified angle. This is an advanced feature. Most Users would not need to call this method because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, the section will be automatically rotated to its principal orientation prior to the stress calculation. Please note equilibrium check will fail unless shear perimeter is in its principal orientation (because superposition of stress due to bi-axial moment is only valid when Ixy = 0)
+### `PunchingShearSection.rotate(angle)`
+
+Rotate the section by a specified angle. This is an advanced feature. Most Users would not need to call this method because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, the section will be automatically rotated to its principal orientation prior to the stress calculation. Please note equilibrium check will fail unless shear perimeter is in its principal orientation (because superposition of stress due to bi-axial moment is only valid when Ixy = 0)
+
+**Arguments:**
 
 * angle: float
   * rotate shear perimeter by a specified **DEGREE** measured counter clockwise from the +X axis.
+
+**Returns:**
+
+
+
+**Example:**
 
 ```python
 # rotate the column by 45 degrees counter-clockwise from +X axis.
@@ -323,29 +352,45 @@ column1.rotate(angle=45)
 
 
 
-**`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`**
+### `PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`
 
-* RETURNS: a dataframe containing calculation results for each patch
+**Arguments:**
 
+**Returns:**
 
-
-
-
-**`PunchingShearSection.preview()`**
-
-* RETURNS: a matplotlib figure
+**Example:**
 
 
 
-**`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`**
-
-RETURNS: a matplotlib figure
 
 
+### `PunchingShearSection.preview()`
 
-**`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`**
+**Arguments:**
 
-RETURNS: a plotly figure (html)
+**Returns:**
+
+**Example:**
+
+
+
+### `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
+
+**Arguments:**
+
+**Returns:**
+
+**Example:**
+
+
+
+### `PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
+
+**Arguments:**
+
+**Returns:**
+
+**Example:**
 
 
 
@@ -371,9 +416,6 @@ TODO
 ## Assumptions and Limitations
 
 TODO
-
-
-
 
 
 
