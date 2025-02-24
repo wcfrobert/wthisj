@@ -33,7 +33,7 @@
 
 ## Quick Start
 
-Here's the minimum viable script. Initialize a shear perimeter, run analysis, and visualize results in 3 lines of python code. 
+Here's the minimum viable script. Define a shear perimeter, run analysis, and visualize results in 3 lines of python code. 
 
 ``` python
 import wthisj
@@ -48,7 +48,7 @@ results = column1.solve(P = -100, Mx = 400, My = 0)
 column1.plot_results_3D()
 ```
 
-Here is a more comprehensive quick start script (main.py):
+Here is a more comprehensive quick start script `main.py`:
 
 ```python
 import wthisj
@@ -83,8 +83,9 @@ column1.plot_results()
 column1.plot_results_3D()
 ```
 
-
-There are (9) possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE). Units should be in **(KIPS, IN)**. Sign convention for the applied force follows the right-hand rule. **P should be negative** unless you are checking uplift. 
+* There are (9) possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE). 
+* Units should be in **(KIPS, IN)**. 
+* Sign convention for the applied force follows the right-hand rule and is illustrated below. Note **P should be negative** unless you are checking uplift. 
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/signconvention.png?raw=true" alt="fig" style="width: 70%;" />
