@@ -17,9 +17,9 @@ column1.add_opening(dx=80, dy=-10, width=18, height=20)
 column1.preview()
 
 # calculate punching shear stress
-results = column1.solve(P = 100,
-                        Mx = -400,
-                        My = -400,
+results = column1.solve(P = -100,
+                        Mx = 400,
+                        My = 400,
                         consider_Pe=False,
                         auto_rotate=False, 
                         verbose=True)

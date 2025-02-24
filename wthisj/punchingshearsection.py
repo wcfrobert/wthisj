@@ -943,7 +943,7 @@ class PunchingShearSection:
         
         Args:
             P (float): 
-                Applied shear force in KIPS. Should be positive unless you have a hanger column!
+                Applied shear force in KIPS. Should be negative unless you are checking uplift
                 
             Mx (float): 
                 Applied moment about the X-axis in KIP.IN.
@@ -1053,6 +1053,10 @@ class PunchingShearSection:
         if did_not_auto_generate_perimeter and did_not_specify_gamma_v:
             raise RuntimeError("WARNING: Custom perimeter detected. Cannot calculate gamma_v automatically. Please provide it")
         
+        # warning if P is positive
+        if P > 0:
+            print("WARNING: P is positive indicating uplift.")
+        
         # calculate gamma_v
         lx = max([xi for xi in self.perimeter["x_centroid"]]) - min([xi for xi in self.perimeter["x_centroid"]])
         ly = max([yi for yi in self.perimeter["y_centroid"]]) - min([yi for yi in self.perimeter["y_centroid"]])
@@ -1109,7 +1113,7 @@ class PunchingShearSection:
         # calculate Pe moment if applicable
         if consider_Pe:
             Pex = P * self.x_centroid
-            Pey = - P * self.y_centroid # i think there is a right-hand rule flip here.
+            Pey = - P * self.y_centroid # i think there is a right-hand rule flip here
         else:
             Pex = 0
             Pey = 0
@@ -1130,9 +1134,9 @@ class PunchingShearSection:
             dy = self.perimeter["y_centroid"][i] - self.y_centroid
             
             # elastic method calculation
-            v_axial = -self.P / self.A
-            v_Mx = -self.Mx_final * dy / self.Ix
-            v_My = self.My_final * dx / self.Iy
+            v_axial = self.P / self.A
+            v_Mx = self.Mx_final * dy / self.Ix
+            v_My = -self.My_final * dx / self.Iy
             v_total = v_axial + v_Mx + v_My
             Fz = v_total * self.perimeter["area"][i]
             Mxi = Fz * dy
@@ -1149,13 +1153,17 @@ class PunchingShearSection:
         self.v_max = abs(max(self.perimeter["v_total"], key=abs))
         
         # check equilibrium
+        # note I am subtracting below because we are specifying the applied force, and deriving the
+        # applied stress distribution rather than the reactions. This is all kind of backwards
+        # I am used to going from loading --> reaction. In this case, we are goin from:
+        # reaction -> loading -> loading distribution
         TOL = 0.1
         sumFz = sum(self.perimeter["Fz"])
         sumMx = sum(self.perimeter["Mxi"])
         sumMy = sum(self.perimeter["Myi"])
-        residual_Fz = sumFz + self.P
-        residual_Mx = sumMx + self.Mx_final
-        residual_My = sumMy + self.My_final
+        residual_Fz = sumFz - self.P 
+        residual_Mx = sumMx - self.Mx_final
+        residual_My = sumMy - self.My_final
         flag_Fz = "OK" if abs(residual_Fz) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
         flag_Mx = "OK" if abs(residual_Mx) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
         flag_My = "OK" if abs(residual_My) < TOL else "WARNING: NOT OKAY. EQUILIBRIUM NOT SATISFIED"
@@ -1200,7 +1208,7 @@ class PunchingShearSection:
             print("\t\t Maximum shear stress = {:.1f} psi".format(self.v_max*1000))
             
             print("4. Checking equilibrium...")
-            print("\t\t {:<8} {:<10} {:<10} {:<10} {:<10}".format("Force", "Applied", "Reaction", "Residual", "Equilibrium?"))
+            print("\t\t {:<8} {:<10} {:<10} {:<10} {:<10}".format("Force", "Applied", "SUM", "Residual", "Equilibrium?"))
             print("\t\t " + "-" * 55)
             print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("Fz", self.P, sumFz, residual_Fz, flag_Fz))
             print("\t\t {:<8} {:<10.1f} {:<10.1f} {:<10.2f} {:<10}".format("Mx", self.Mx_final, sumMx, residual_Mx, flag_Mx))
