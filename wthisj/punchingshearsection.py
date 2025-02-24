@@ -1240,6 +1240,7 @@ class PunchingShearSection:
         
         # prepare colormap
         cm = plt.get_cmap(colormap)
+        cm = cm.reversed()
         magnitude = [v*1000 for v in self.perimeter["v_total"]] # convert to psi
         cmin = min(magnitude) if cmin == "auto" else cmin
         cmax = max(magnitude) if cmax == "auto" else cmax
@@ -1528,6 +1529,7 @@ class PunchingShearSection:
         #################################################
         # prep colormap and vector length
         cm = plt.get_cmap(colormap)
+        cm = cm.reversed()
         magnitude = [v*1000 for v in self.perimeter["v_total"]] # convert to psi
         cmin = min(magnitude) if cmin == "auto" else cmin
         cmax = max(magnitude) if cmax == "auto" else cmax
@@ -1602,6 +1604,7 @@ class PunchingShearSection:
                                       showlegend = False,
                                       opacity=0,
                                       marker_colorscale=colormap,
+                                      marker_reversescale=True,
                                       marker_showscale=True,
                                       marker_cmin = cmin,
                                       marker_cmax = cmax,

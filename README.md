@@ -207,7 +207,6 @@ If you need guidance at any time, use the help() command to access method docstr
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/help.png?raw=true" alt="fig" style="width: 80%;" />
 </div>
 
-Comprehensive documentation:
 
 ### `PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
 
@@ -268,6 +267,8 @@ column1 = wthisj.PunchingShearSection(width = 24,
                                       overhang_y = 12,
                                       L_studrail = 36)
 ```
+
+
 
 
 ### `PunchingShearSection.add_opening(dx, dy, width, height)`
@@ -332,7 +333,11 @@ results = column1.solve(P = -100,
 ```
 
 
+
+
 ### `PunchingShearSection.preview()`
+
+Preview critical shear perimeter, along with openings, slab edges, and other contexts. Geometric properties like $b_o$ and $I_x$ are also shown.
 
 **Arguments:**
 
@@ -345,11 +350,16 @@ results = column1.solve(P = -100,
 **Example:**
 
 ```python
-
+# visualize what the shear perimeter looks like
+fig1 = column1.preview()
 ```
 
 
+
+
 ### `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
+
+Visualize punching shear calculation results in a 2D format using matplotlib.
 
 **Arguments:**
 
@@ -364,10 +374,17 @@ results = column1.solve(P = -100,
 **Example:**
 
 ```python
-
+# visualize shear stress plot. Use the "turbo" colormap instead. Set cmax to 160 psi so that anything higher is colored red.
+fig2 = column1.plot_results(colormap="turbo", cmax=160)
 ```
 
+
+
+
+
 ### `PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
+
+Visualize punching shear calculation results in an interactive 3D format using plotly.
 
 **Arguments:**
 
@@ -383,13 +400,16 @@ results = column1.solve(P = -100,
 **Example:**
 
 ```python
-
+# visualize shear stress. Use the "plasma" colormap. Change scale to 5 so the stress vectors are not too large.
+fig3 = column1.plot_results_3D(colormap="plasma", scale=5)
 ```
+
+
 
 
 ### `PunchingShearSection.add_perimeter(start, end, depth)`
 
-This is an advanced feature. Draw a shear perimeter line. Used when the user to draw highly customized shear perimeter. Most users would not need to use this because the `auto_generate_perimeter` parameter is set to True during initialization.
+Draw a shear perimeter line. This is an advanced feature used by users who wish to draw highly customized shear perimeter. Not needed in most cases because the `auto_generate_perimeter` parameter is set to True during initialization.
 
 **Arguments:**
 
@@ -424,7 +444,7 @@ column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
 
 ### `PunchingShearSection.rotate(angle)`
 
-This is an advanced feature. Rotate the section by a specified angle. Most Users would not need to call this method because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, the section will be automatically rotated to its principal orientation prior to the stress calculation. Equilibrium check will NOT pass unless shear perimeter is in its principal orientation - because superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info.
+Rotate the shear section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Equilibrium check will NOT pass unless shear perimeter is in its principal orientation - because superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info.
 
 **Arguments:**
 
