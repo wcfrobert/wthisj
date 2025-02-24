@@ -86,8 +86,7 @@ column1.plot_results_3D()
 ```
 
 
-There are (9) possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE). Sign convention for the applied force follows the right-hand rule. **P should be negative** unless you are checking uplift. 
-
+There are (9) possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE). Units should be in **(KIPS, IN)**. Sign convention for the applied force follows the right-hand rule. **P should be negative** unless you are checking uplift. 
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/signconvention.png?raw=true" alt="fig" style="width: 70%;" />
@@ -185,33 +184,34 @@ pip install wthisj
 
 Here are all the public methods available to the user:
 
-**Defining a Punching Shear Perimeter**
+**Step 1: Define a Punching Shear Perimeter**
 
-- `PunchingShearSection.__init__(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
+- `PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
 - `PunchingShearSection.add_perimeter(start, end, depth)`
 - `PunchingShearSection.add_opening(dx, dy, width, height)`
 - `PunchingShearSection.rotate(angle)`
 
-**Run Analysis**
+**Step 2: Run Analysis**
 
 - `PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`
 
 
-**Plotting Results**
+**Step 3: Plotting Results**
 
 - `PunchingShearSection.preview()`
 - `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
 - `PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
 
-If you need further guidance at any time, simply use the help() command to access the method docstrings. For example, here is the output for `help(wthisj.PunchingShearSection.add_opening)`
+If you need guidance at any time, use the help() command to access method docstrings. For example, here is the output for `help(wthisj.PunchingShearSection.add_opening)`
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/help.png?raw=true" alt="fig" style="width: 80%;" />
 </div>
 
 
+**`PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`**
 
-### `PunchingShearSection.__init__(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
+Arguments:
 
 * width: float
   * Column dimension along x-axis
@@ -230,12 +230,12 @@ If you need further guidance at any time, simply use the help() command to acces
 * overhang_x: float (OPTIONAL)
   * Default = 0
   * Slab overhang dimension along the X-axis beyond column face.
-  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition.
+  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition where d is the slab depth, and b is the column dimension perpendicular to the edge.
 
 * overhang_y: float (OPTIONAL)
   * Default = 0
   * Slab overhang dimension along the Y-axis beyond column face.
-  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition.
+  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition where d is the slab depth, and b is the column dimension perpendicular to the edge.
 
 * L_studrail: float (OPTIONAL)
   * Default = 0
@@ -243,66 +243,107 @@ If you need further guidance at any time, simply use the help() command to acces
 
 * auto_generate_perimeter: bool (OPTIONAL)
   * Default = True
-  * Automatically generate the punching shear perimeter based on the arguments entered by the user above.
-  * Alternatively, the user may set this parameter to False, then draw each perimeter line manually using the `.add_perimeter()` method.
+  * Automatically generate the punching shear perimeter based on the arguments entered by the user above. Alternatively, the user may set this parameter to False, then draw each perimeter line manually using the `.add_perimeter()` method.
 
 * PATCH_SIZE: float (OPTIONAL)
   * Default = 0.5
   * By default, the shear perimeter is numerically discretized into 0.5" fibers. You can specify a smaller fiber size to improve accuracy. 0.5" is small enough for most cases.
 
+Returns:
+
+* None
+
+Example:
 
 
+```python
+# define a top-left corner column (24"x24") supporting a slab with rebar depth of 12". 
+# Add 36" long stud rails on the inner faces. Slab overhang is 12" in both directions.
+column1 = wthisj.PunchingShearSection(width = 24,
+                                      height = 24,
+                                      slab_depth = 12,
+                                      condition = "NW",
+                                      overhang_x = 12,
+                                      overhang_y = 12,
+                                      L_studrail = 36)
+```
 
 
-`PunchingShearSection.add_perimeter(start, end, depth)`
+**`PunchingShearSection.add_perimeter(start, end, depth)`** - Draw a shear perimeter line. This is an advanced feature. Most users would not need to use this.
 
-* start: float
-  * 
-* end: float
-  * 
+* start: [float]
+  * [x, y] coordinate of the start point
+* end: [float]
+  * [x, y] coordinate of the end point
 * depth: float
-  * 
+  * slab depth along this line
 
-`PunchingShearSection.add_opening(dx, dy, width, height)`
+```python
+# define a 18" x 18" column, but turn auto-generate perimeter off
+column1 = wthisj.PunchingShearSection(width = 18,
+                                      height = 18,
+                                      slab_depth = 12,
+                                      condition = "I",
+                                      auto_generate_perimeter = False)
+
+# draw a custom perimeter where one side has a slab depth of 6" rather than 12"
+column1.add_perimeter(start=[-15,-15], end=[-15,15], depth=12)
+column1.add_perimeter(start=[-15,15], end=[12,15], depth=12)
+column1.add_perimeter(start=[12,15], end=[12,-15], depth=6)
+column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
+```
+
+
+**`PunchingShearSection.add_opening(dx, dy, width, height)`**
 
 * dx: float
-  * 
+  * x-offset from column center (0,0) to the bottom left corner of opening
 * dy: float
-  * 
+  * y-offset from column center (0,0) to the bottom left corner of opening
 * width: float
-  * 
+  * opening width
 * height: float
-  * 
+  * opening height
 
-`PunchingShearSection.rotate(angle)`
+```python
+# add a 18" x 20" opening with bottom-left corner located 80" left and 10" below the column center.
+column1.add_opening(dx=80, dy=-10, width=18, height=20)
+```
+
+
+**`PunchingShearSection.rotate(angle)`** - Rotate the section by a specified angle. This is an advanced feature. Most Users would not need to call this method because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, the section will be automatically rotated to its principal orientation prior to the stress calculation. Please note equilibrium check will fail unless shear perimeter is in its principal orientation (because superposition of stress due to bi-axial moment is only valid when Ixy = 0)
 
 * angle: float
-  * 
+  * rotate shear perimeter by a specified **DEGREE** measured counter clockwise from the +X axis.
 
-### Step 2: Run Analysis
+```python
+# rotate the column by 45 degrees counter-clockwise from +X axis.
+column1.rotate(angle=45)
+```
 
-`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`
+
+
+**`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`**
 
 * RETURNS: a dataframe containing calculation results for each patch
 
 
 
 
-### Step 3: Visualization
 
-`PunchingShearSection.preview()`
+**`PunchingShearSection.preview()`**
 
 * RETURNS: a matplotlib figure
 
 
 
-`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
+**`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`**
 
 RETURNS: a matplotlib figure
 
 
 
-`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
+**`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`**
 
 RETURNS: a plotly figure (html)
 
