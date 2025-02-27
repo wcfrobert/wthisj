@@ -208,11 +208,9 @@ If you need guidance at any time, use the help() command to access method docstr
 </div>
 
 
-### 1. Methods for Defining a Shear Perimeter
+### 1. Define a Shear Perimeter
 
-**`PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate a punching shear section object.
-
-<u>Arguments:</u>
+**`PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate and return a PunchingShearSection object.
 
 * width: float
   * Column dimension along x-axis
@@ -250,10 +248,6 @@ If you need guidance at any time, use the help() command to access method docstr
   * Default = 0.5
   * By default, the shear perimeter is numerically discretized into 0.5" fibers. You can specify a smaller fiber size to improve accuracy. 0.5" is small enough for most cases.
 
-<u>Returns:</u>
-
-* PunchingShearSection object
-
 ```python
 # define a top-left corner column (24"x24") supporting a slab with rebar depth of 12". 
 # Add 36" long stud rails on the inner faces. Slab overhang is 12" in both directions.
@@ -268,9 +262,9 @@ column1 = wthisj.PunchingShearSection(width = 24,
 
 
 
-**`PunchingShearSection.add_opening(dx, dy, width, height)`** - Add an opening nearby. The column center is always located at (0,0).
+### 2. Add an Opening
 
-<u>Arguments:</u>
+**`PunchingShearSection.add_opening(dx, dy, width, height)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
 
 * dx: float
   * x-offset from column center (0,0) to the bottom left corner of opening
@@ -281,9 +275,6 @@ column1 = wthisj.PunchingShearSection(width = 24,
 * height: float
   * opening height
 
-<u>Returns:</u>
-
-* None
 
 ```python
 # add a 18" x 20" opening with bottom-left corner located 80" left and 10" below the column center.
@@ -294,11 +285,9 @@ column1.add_opening(dx=80, dy=-10, width=18, height=20)
 
 
 
-### 2. Method for Running Analysis
+### 3. Run Analysis
 
-**`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`** - Run analysis routine.
-
-<u>Arguments:</u>
+**`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`** - Start analysis routine. Returns a dataframe where each row is a fiber within the shear perimeter, and the columns are the intermediate calculation results. 
 
 * P: float
 * Mx: float
@@ -308,10 +297,8 @@ column1.add_opening(dx=80, dy=-10, width=18, height=20)
 * consider_Pe: bool (OPTIONAL)
 * auto_rotate: bool (OPTIONAL)
 * verbose: bool (OPTIONAL)
+  * whether or not to printout calculations and helpful messages. Default = True.
 
-<u>Returns:</u>
-
-* df_perimeter: dataframe
 
 ```python
 results = column1.solve(P = -100,
@@ -324,17 +311,11 @@ results = column1.solve(P = -100,
 
 
 
-### 3. Methods for Result Visualization
+### Preview Geometry And Section Properties
 
-**`PunchingShearSection.preview()`** - Preview critical shear perimeter, along with openings, slab edges, and other contexts. Geometric properties like $b_o$ and $I_x$ are also shown.
+**`PunchingShearSection.preview()`** - Preview critical shear perimeter, along with openings, slab edges, and other contexts. Geometric properties like $b_o$ and $I_x$ are also shown. Returns a matplotlib fig object.
 
-<u>Arguments:</u>
-
-* None
-
-<u>Returns:</u>
-
-* fig: matplotlib figure object
+* No argument necessary.
 
 ```python
 # visualize what the shear perimeter looks like
@@ -343,40 +324,43 @@ fig1 = column1.preview()
 
 
 
-**`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`** - Visualize punching shear calculation results in a 2D format using matplotlib.
+### Visualize Results - 2D
 
-<u>Arguments:</u>
+**`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`** - Visualize punching shear calculation results in a 2D format using matplotlib. Returns a matplotlib fig object.
 
 * colormap: string (OPTIONAL)
+  * named colormap. Here's a [list of all available colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html). "jet" is a common colormap for stress visualization.
 * cmin: float or string (OPTIONAL)
+  * specify min range for color mapping. By default, the colormap range is automatically calculated to span from min(stress) to max(stress)
 * cmax: float or string (OPTIONAL)
-
-<u>Returns:</u>
-
-* fig: matplotlib figure object
+  * specify max range for color mapping. By default, the colormap range is automatically calculated to span from min(stress) to max(stress)
 
 ```python
-# visualize shear stress plot. Use the "turbo" colormap instead. Set cmax to 160 psi so that anything higher is colored red.
+# visualize shear stress plot. Use the "turbo" colormap instead 
+# set cmax to 160 psi so that anything higher is colored red
 fig2 = column1.plot_results(colormap="turbo", cmax=160)
 ```
 
 
 
-**`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`** - Visualize punching shear calculation results in an interactive 3D format using plotly.
+### Visualize Results - 3D
 
-<u>Arguments:</u>
+**`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`** - Visualize punching shear calculation results in an interactive 3D format using plotly. Returns a plotly figure object.
+
 
 * colormap: string (OPTIONAL)
+  * named colormap. Here's a [list of all available colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html). "jet" is a common colormap for stress visualization.
 * cmin: float or string (OPTIONAL)
+  * specify min range for color mapping. By default, the colormap range is automatically calculated to span from min(stress) to max(stress)
 * cmax: float or string (OPTIONAL)
+  * specify max range for color mapping. By default, the colormap range is automatically calculated to span from min(stress) to max(stress)
 * scale: float (OPTIONAL)
+  * scaling factor used to adjust the size of vector plot. Default is 10.
 
-<u>Returns:</u>
-
-* fig: plotly figure object
 
 ```python
-# visualize shear stress. Use the "plasma" colormap. Change scale to 5 so the stress vectors are not too large.
+# visualize shear stress. Use the "plasma" colormap
+# change scale to 5 so the stress vectors are not too large.
 fig3 = column1.plot_results_3D(colormap="plasma", scale=5)
 ```
 
@@ -384,11 +368,9 @@ fig3 = column1.plot_results_3D(colormap="plasma", scale=5)
 
 
 
-### 4. Advanced Features
+### Advanced Features
 
-**`PunchingShearSection.add_perimeter(start, end, depth)`** - Draw a shear perimeter line. This is an advanced feature used by users who wish to draw highly customized shear perimeter. Not needed in most cases because the `auto_generate_perimeter` parameter is set to True during initialization.
-
-<u>Arguments:</u>
+**`PunchingShearSection.add_perimeter(start, end, depth)`** - Draw a shear perimeter line. This is an advanced feature used by users who wish to draw highly customized shear perimeter. Not needed in most cases because the `auto_generate_perimeter` parameter is set to True during initialization. This method modifies the PunchingShearSection object internally and does not return anything.
 
 * start: [float]
   * [x, y] coordinate of the start point
@@ -397,9 +379,6 @@ fig3 = column1.plot_results_3D(colormap="plasma", scale=5)
 * depth: float
   * slab depth along this line
 
-<u>Returns:</u>
-
-* None
 
 ```python
 # define a 18" x 18" column, but turn auto-generate perimeter off
@@ -416,16 +395,11 @@ column1.add_perimeter(start=[12,15], end=[12,-15], depth=6)
 column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
 ```
 
-**`PunchingShearSection.rotate(angle)`** - Rotate the shear section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Equilibrium check will NOT pass unless shear perimeter is in its principal orientation - because superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info.
-
-<u>Arguments:</u>
+**`PunchingShearSection.rotate(angle)`** - Rotate the shear section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Equilibrium check will NOT pass unless shear perimeter is in its principal orientation - because superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info. This method modifies the PunchingShearSection object internally and does not return anything.
 
 * angle: float
   * rotate shear perimeter by a specified **DEGREE** measured counter clockwise from the +X axis.
 
-<u>Returns:</u>
-
-* None
 
 ```python
 # rotate the column by 45 degrees counter-clockwise from +X axis.
