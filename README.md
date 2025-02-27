@@ -208,7 +208,7 @@ If you need guidance at any time, use the help() command to access method docstr
 </div>
 
 
-### 1. Define a Shear Perimeter
+### Define a Shear Perimeter
 
 **`PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate and return a PunchingShearSection object.
 
@@ -262,7 +262,7 @@ column1 = wthisj.PunchingShearSection(width = 24,
 
 
 
-### 2. Add an Opening
+### Add an Opening
 
 **`PunchingShearSection.add_opening(dx, dy, width, height)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
 
@@ -285,22 +285,32 @@ column1.add_opening(dx=80, dy=-10, width=18, height=20)
 
 
 
-### 3. Run Analysis
+### Run Analysis
 
 **`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`** - Start analysis routine. Returns a dataframe where each row is a fiber within the shear perimeter, and the columns are the intermediate calculation results. 
 
 * P: float
+  * Applied shear force in KIPS. Should be negative unless you are checking uplift
 * Mx: float
+  * Applied moment about the X-axis in KIP.IN.
 * My: float
+  * Applied moment about the Y-axis in KIP.IN.
 * gamma_vx: float or string (OPTIONAL)
+  * Percentage of X moment transferred to the column via shear. wthisj automatically calculates this by default. Or the user may enter a specific value of gamma_v (e.g. 0.4)
 * gamma_vy: float or string (OPTIONAL)
+  * Percentage of Y moment transferred to the column via shear. wthisj automatically calculates this by default. Or the user may enter a specific value of gamma_v (e.g. 0.4)
 * consider_Pe: bool (OPTIONAL)
+  * Whether or not to consider additional moment due to eccentricity between the column centroid and perimeter centroid. Defaults to True. Refer to the theory section for more info!
 * auto_rotate: bool (OPTIONAL)
+  * Whether or not to auto-rotate geometry if it is not in principal orientation. Refer to the theory section for more info!
 * verbose: bool (OPTIONAL)
-  * whether or not to printout calculations and helpful messages. Default = True.
+  * Whether or not to printout calculations and helpful messages. Default = True.
 
 
 ```python
+# Check punching shear stress for a perimeter subjected to 100 kips of shear, 400 kips.in of moment in both directions.
+# Do not rotate the section to principal orientation.
+# Do not consider additional moment due to eccentricity between column and perimeter centroid.
 results = column1.solve(P = -100,
                         Mx = 400,
                         My = 400,
@@ -311,7 +321,7 @@ results = column1.solve(P = -100,
 
 
 
-### Preview Geometry And Section Properties
+### Preview Geometry
 
 **`PunchingShearSection.preview()`** - Preview critical shear perimeter, along with openings, slab edges, and other contexts. Geometric properties like $b_o$ and $I_x$ are also shown. Returns a matplotlib fig object.
 
@@ -409,21 +419,27 @@ column1.rotate(angle=45)
 
 
 
-
-
-
-
 ## Theoretical Background
 
-TODO
+### 1.0 Punching Shear Basics
 
 
+### 2.0 What Does the Code Say?
 
 
+### 3.0 What is J?
 
 
+### 4.0 Start From Elastic method
 
 
+### 5.0 Numerical Approximation with wthisj
+
+
+### 6.0 Nuance 1: Principal Orientation
+
+
+### 7.0 Nuance 2: Additional Pe Moment
 
 
 
