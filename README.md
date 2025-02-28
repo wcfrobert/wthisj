@@ -419,13 +419,33 @@ column1.rotate(angle=45)
 
 ## Theoretical Background
 
-### 1.0 What is Punching Shear?
+### 1.0 Punching Shear Introduction
+
+Two-way shear, known colloquially as punching shear, is a load transfer mechanism between concrete two-way slabs and its supporting columns. Punching shear failures are absolutely catastrophic and keeps engineers up at night (looks like and analogous to pencil through paper). 
+
+A more traditional concrete floor system might have a load path that looks like this:
+
+* loads > one-way slab panels > beams and/or girders > columns
+
+Whereas a more modern concrete floor system might have a load path that looks like this:
+
+* loads > two-way slabs > columns
+
+![img](./doc/theory1.png)
+
+The traditional system has a very clear and easy-to-calculate load path. It's a statics calculation for the slab panels, then another for the beams/girders. Everything is doable by hand. Punching shear check is not required if the beams are deep enough (which they usually are). Instead, the engineer needs to check is one-way shear in the girders. The downside for this type of construction is that beams and girders equals more formwork, which means more carpentry work, which means more labor, higher cost, longer construction time.
+
+The modern approach reduces labor, cost, and time by drastically simplifying the floor system in terms of the number of pieces. However, two-way slabs tend to be more complex to analyze, with messy force distributions, and deflection that is hard to predict. In the old days, engineers used the direct design method to design two-way slabs. It's quite tedious and have a lot of limitations. Things really changed once FEM became more prominent in industry practice. Most concrete high-rises in the US today have this type of lean and light floor system. The increase in efficiency comes with a decrease in redundancy. If the slab fails, that's it. Those shear stresses are typically quite high, and their consideration is extremely important.
 
 
-### 2.0 What is J?
 
 
-### 3.0 Elasticity
+
+
+### 2.0 History - What The Heck Is J?
+
+
+### 3.0 Elastic Method
 
 
 ### 4.0 Numerical Approximation with wthisj
