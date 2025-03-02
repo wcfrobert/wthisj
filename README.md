@@ -437,7 +437,7 @@ So what is the trade-off? The lack of supporting beams means **less redundancy**
 
 The evaluation of punching shear is conceptually simple (we will gradually introduce more nuances). Assuming negligible moment transfer, the shear stress is equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is an inverted truncated cone. To simplify, ACI-318 allows the critical **shear perimeter** to be approximated as being d/2 offset from the column face. The critical shear section is shown in the figure below in dotted line. 
 
-<p align="center"><img src="./doc/theory3.png" width="30%"></p>
+<p align="center"><img src="./doc/theory3.png" width="40%"></p>
 
 Therefore, the total shear area of the critical section is equal to the perimeter ($b_o$) times the slab depth ($d$). Note slab depth is measured from the extreme compression fiber to tension rebar (taking the average depth of the two-orthogonal rebar directions).
 
@@ -449,11 +449,15 @@ $$v_u = \frac{V_u}{b_od}$$
 
 In practice, the equation above is only really good as a preliminary estimate. Moment transfer can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is almost always unreasonable to assume zero moment transfer, especially so at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. The only time it is reasonable to assume negligible moment transfer is in an idealized world where cows are spheres and there's no friction (i.e. in classrooms).
 
-To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas with see in college textbooks ($P/A + Mc/I$). Let's go through the variables in the second term one-by-one.
+To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas with see in college textbooks ($P/A + Mc/I$) but not exactly. Below is an illustration of the superposition of shear stresses from the [Macgregor Textbook](https://www.amazon.com/Reinforced-Concrete-Mechanics-Design-6th/dp/0132176521) (slightly modified). I firmly believe this is one of the greatest engineering textbook ever written and I'm a huge fan of Dr. MacGregor, not least because he is also Canadian.
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
 
+<p align="center"><img src="./doc/theory7.png" width="80%"></p>
 
+
+
+Let's go through the variables in the second term one-by-one.
 
 **Unbalanced Moment ($M_{sc}$)**
 
@@ -463,18 +467,18 @@ The slab moment transferred into the supporting column is known as **unbalanced 
 
 **Moment Transfer Ratio ($\gamma$)**
 
-This unbalanced moment described above can transfer into the columns in two ways. This is illustrated in the figure below.
+The unbalanced moment described above can transfer into the columns in two ways. This is illustrated in the figure below.
 
 * Flexure within a limited transfer widths ($\gamma_f$)
 * Shear ($\gamma_v$)
 
 
 
-<p align="center"><img src="./doc/theory5.png" width="30%"></p>
+<p align="center"><img src="./doc/theory5.png" width="40%"></p>
 
 We use the Greek letter ($\gamma$) to denote the percentage of moment transferred through each mode. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest for us because it will amplify shear stress.
 
-ACI-318 has equations for estimating $\gamma$ based on the column dimension. $b_1$ is the column dimension parallel to the slab span, whereas $b_2$ is the column dimension perpendicular to the slab span. To get a sense proportion, the ratio for a square column is 60% through flexure, and 40% through shear.
+ACI-318 has equations for estimating $\gamma$ based on the column dimension. $b_1$ is the critical perimeter dimension parallel to the slab span, whereas $b_2$ is the critical perimeter dimension perpendicular to the slab span. For example, the ratio for a square column is 60% through flexure, and 40% through shear.
 
 $$\gamma_f = \frac{1}{1+2/3\sqrt{\frac{b_1}{b_2}}}$$
 
@@ -482,7 +486,21 @@ $$\gamma_v = 1 - \gamma_f$$
 
 
 
-<p align="center"><img src="./doc/theory6.png" width="70%"></p>
+<p align="center"><img src="./doc/theory6.png" width="100%"></p>
+
+**Distance From Perimeter Centroid ($c$)**
+
+The parameter c is the distance from the centroid to any fiber in the parameter. This distance is measured orthogonal to the applied moment vector. We usually only care about the fiber furthest away where the shear stress will be highest.
+
+<p align="center"><img src="./doc/theory9.png" width="70%"></p>
+
+The critical shear perimeter has a centroid that we can calculate. For interior columns, the centroid of the column coincides exactly with the centroid of the shear perimeter which is what we see in the figure above. However, as we see in the figure below, this is not the case for edge and corner conditions.
+
+<p align="center"><img src="./doc/theory8.png" width="60%"></p>
+
+**"Polar Moment of Inertia" ($J_c$)**
+
+The last parameter we shall explore is ($J_c$)...
 
 
 
@@ -491,6 +509,14 @@ $$\gamma_v = 1 - \gamma_f$$
 
 
 
+
+
+
+
+
+
+
+**What About Allowable Shear Capacity?**
 
 on the capacity side, I won't be covering this in detail. Please refer to the building code for more detail. In general, the allowable shear stress ranges from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
 
@@ -500,7 +526,15 @@ IN PROGRESS
 
 
 
-### 2.0 History
+
+
+
+
+
+
+
+
+### 2.0 Background Info on J
 
 
 
