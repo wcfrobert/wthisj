@@ -425,7 +425,7 @@ Two-way shear - known colloquially as punching shear - is a load transfer mechan
 
 In the figure below, we see two types of concrete floor systems. The one on the left is a more traditional approach, whereby the slab is supported by beams, which then transfer the load to the columns. The one on the right is more modern, it has a completely flat soffit, and it eliminates the need to any beams at all.
 
-<img src="./doc/theory1.png" width="70%">
+<img src="./doc/theory1.png" width="70%" align="center">
 
 It is easy to see why beam-supported slab systems have fallen out of favor. Beams and girders must be shaped with formwork, which means more carpentry work, which means more labor, higher cost, and longer construction time. On the other hand, flat plate slabs are easier to build, reduce complexity in terms of detailing, give MEP trade partners full flexibility in the ceiling space (no more coring through beams), and minimize formwork (see [flying form](https://www.concrete.org.uk/fingertips-nuggets.asp?cmd=display&id=536)). Furthermore, the shallow floor depths means more floors can fit within the same building height constraint. This is a no-brainer decision for developers. Most concrete high-rises in the US today have flat plate floor systems. 
 
