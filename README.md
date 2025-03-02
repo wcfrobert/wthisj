@@ -421,21 +421,21 @@ column1.rotate(angle=45)
 
 ### 1.0 Introduction
 
-Two-way shear - known colloquially as punching shear - is a load transfer mechanism between concrete slabs and its supporting columns. This type of load transfer is unique to a special type of floor system known as **flat plate** (or flat slab when there's drop panels or column caps), whereby the two-way spanning slab is supported directly by columns; no beams, no girders, just a smooth monolithic plate.
+Two-way shear - known colloquially as punching shear - is a load transfer mechanism between concrete slabs and its supporting columns. This type of load transfer is unique to a special type of floor system called **flat plate**, whereby the two-way spanning slab is supported directly by columns; no beams, no girders, just a smooth monolithic plate.
 
-In the figure below, we see two types of concrete floor systems. The one on the left is a more traditional approach, whereby the slab is supported by beams, which then transfer the load to the columns. The one on the right is more modern, it has a completely flat soffit, and it eliminates the need to any beams at all.
+In the figure below, we see two types of concrete floor systems. The one on the left is a more traditional approach, whereby the slab is supported by intersecting beams, which then transfer the load to the columns. The modern approach, shown on the right, has a completely flat soffit, and eliminates the need to any beams at all.
 
 <p align="center"><img src="./doc/theory1.png" width="70%"></p>
 
 It is easy to see why beam-supported slab systems have fallen out of favor. Beams and girders must be shaped with formwork, which means more carpentry work, which means more labor, higher cost, and longer construction time. On the other hand, flat plate slabs are easier to build, reduce complexity in terms of detailing, give MEP trade partners full flexibility in the ceiling space (no more coring through beams), and minimize formwork (see [flying form](https://www.concrete.org.uk/fingertips-nuggets.asp?cmd=display&id=536)). Furthermore, the shallow floor depths means more floors can fit within the same building height constraint. This is a no-brainer decision for developers. Most concrete high-rises in the US today have flat plate floor systems. 
 
-So what is the trade-off? The lack of supporting beams means **less redundancy** and **high shear stress** around the supporting columns. Flat plate slabs fail like a pencil through paper, and if the slab fails, that's the end. The figure below is an illustration of punching shear failure. The photo on the left is a garage in the UK (Piper's Row Car Park, Wolverhampton) built in the 1960s. Punching shear failures are absolutely catastrophic and keeps engineers up at night. Needless to say, the accurate evaluation of punching shear has become critically important.
+So what is the trade-off? The lack of supporting beams means **less redundancy** and **high shear stress** around the supporting columns. If improperly design, flat plates can fail like a pencil through paper, and if the slab fails, that's game over. The figure below is an illustration of punching shear failure. The photo on the left is a garage in the UK (Piper's Row Car Park, Wolverhampton) built in the 1960s. Punching shear failures are absolutely catastrophic and keeps engineers up at night. Needless to say, the accurate evaluation of punching shear has become critically important.
 
 <p align="center"><img src="./doc/theory2.png" width="50%"></p>
 
 ### 2.0 Punching Shear Calculation Per ACI-318
 
-The evaluation of punching shear is conceptually simple (we will introduce more nuances later on). Assuming negligible moment transfer, the shear stress is equal to the load transfer to the column divided by the total area of the failure plane. This failure plane is an inverted truncated cone. To simplify, ACI-318 allows the critical **shear perimeter** to be approximated as being d/2 offset from the column face. See figure below. 
+The evaluation of punching shear is conceptually simple (we will gradually introduce more nuances). Assuming negligible moment transfer, the shear stress is equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is an inverted truncated cone. To simplify, ACI-318 allows the critical **shear perimeter** to be approximated as being d/2 offset from the column face. The critical shear section is shown in the figure below in dotted line. 
 
 <p align="center"><img src="./doc/theory3.png" width="30%"></p>
 
@@ -443,25 +443,56 @@ Therefore, the total shear area of the critical section is equal to the perimete
 
 $$A_v = b_o d$$
 
-Therefore, the punching shear stress **with negligible moment transfer** is equal to the total shear demand ($V_u$) on the column, divided by the shear area above.
+Taken together, the punching shear stress (**with negligible moment transfer**) is equal to the total shear demand ($V_u$) on the column, divided by the shear area. Note concrete design is very empirical which is why we only care about the average shear stress.
 
 $$v_u = \frac{V_u}{b_od}$$
 
-However, it is unreasonable to assume zero moment transfer! Especially not for edge and corner columns. Most column-slab joints in real buildings will experience some moment transfer. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. The only time it is reasonable to assume negligible moment is in an idealized world where cows are spheres and there's no friction, and we have an interior column with perfectly even loading, no openings, and equal spans in all adjacent bays. The equation above is only really good as a preliminary estimate. Moment transfer can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. 
+In practice, the equation above is only really good as a preliminary estimate. Moment transfer can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is almost always unreasonable to assume zero moment transfer, especially so at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. The only time it is reasonable to assume negligible moment transfer is in an idealized world where cows are spheres and there's no friction (i.e. in classrooms).
 
-The slab moment transferred into the columns is known as **unbalanced moment** ($M_{sc}$). The reason it is called "unbalanced" is because of the vertical offsets present in the slab moment diagram. I don't like this name because everything is balanced for static equilibrium. If we plot the moment diagram for an floor assembly, we see exactly where that unbalanced moment is going: into the columns. 
+To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas with see in college textbooks ($P/A + Mc/I$). Let's go through the variables in the second term one-by-one.
+
+$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
+
+
+
+**Unbalanced Moment ($M_{sc}$)**
+
+The slab moment transferred into the supporting column is known as **unbalanced moment** ($M_{sc}$). The reason it is called "unbalanced" is because of the vertical offsets present in the slab moment diagram. I don't like this naming because everything is balanced for static equilibrium. If we plot the moment diagram for the entire floor assembly, we see exactly where that unbalanced moment is going: into the columns. 
 
 <p align="center"><img src="./doc/theory4.png" width="50%"></p>
 
-This unbalanced moment can transfer into the columns in two ways: 1.) flexure within a transfer width, and 2.) eccentric shear. The second load path is of interest for us because it amplifies shear stress. 
+**Moment Transfer Ratio ($\gamma$)**
+
+This unbalanced moment described above can transfer into the columns in two ways. This is illustrated in the figure below.
+
+* Flexure within a limited transfer widths ($\gamma_f$)
+* Shear ($\gamma_v$)
+
+
 
 <p align="center"><img src="./doc/theory5.png" width="30%"></p>
 
-To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the elastic stress equations with see in college textbooks ($P/A + Mc/I$):
+We use the Greek letter ($\gamma$) to denote the percentage of moment transferred through each mode. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest for us because it will amplify shear stress.
 
-$$v_u = \frac{V_u}{b_o d} + \frac{\gamma M c}{J}$$
+ACI-318 has equations for estimating $\gamma$ based on the column dimension. $b_1$ is the column dimension parallel to the slab span, whereas $b_2$ is the column dimension perpendicular to the slab span. To get a sense proportion, the ratio for a square column is 60% through flexure, and 40% through shear.
 
-First, on the capacity side, I won't be covering this in detail. Please refer to the building code for more detail. In general, the allowable shear stress ranges from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
+$$\gamma_f = \frac{1}{1+2/3\sqrt{\frac{b_1}{b_2}}}$$
+
+$$\gamma_v = 1 - \gamma_f$$
+
+
+
+<p align="center"><img src="./doc/theory6.png" width="70%"></p>
+
+
+
+
+
+
+
+
+
+on the capacity side, I won't be covering this in detail. Please refer to the building code for more detail. In general, the allowable shear stress ranges from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
 
 
 
