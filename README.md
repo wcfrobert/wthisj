@@ -431,13 +431,13 @@ It is easy to see why beam-supported slab systems have fallen out of favor. Beam
 
 So what is the trade-off? The lack of supporting beams means **less redundancy** and **high shear stress** around the supporting columns. Flat plate slabs fail like a pencil through paper, and if the slab fails, that's the end. The figure below is an illustration of punching shear failure. The photo on the left is a garage in the UK (Piper's Row Car Park, Wolverhampton) built in the 1960s. Punching shear failures are absolutely catastrophic and keeps engineers up at night. Needless to say, the accurate evaluation of punching shear has become critically important.
 
-<img src="./doc/theory2.png" width="50%">
+<p align="center"><img src="./doc/theory2.png" width="50%"></p>
 
 ### 2.0 Punching Shear Calculation Per ACI-318
 
 The evaluation of punching shear is conceptually simple (we will introduce more nuances later on). Assuming negligible moment transfer, the shear stress is equal to the load transfer to the column divided by the total area of the failure plane. This failure plane is an inverted truncated cone. To simplify, ACI-318 allows the critical **shear perimeter** to be approximated as being d/2 offset from the column face. See figure below. 
 
-<img src="./doc/theory3.png" width="30%">
+<p align="center"><img src="./doc/theory3.png" width="30%"></p>
 
 Therefore, the total shear area of the critical section is equal to the perimeter ($b_o$) times the slab depth ($d$). Note slab depth is measured from the extreme compression fiber to tension rebar (taking the average depth of the two-orthogonal rebar directions).
 
@@ -451,11 +451,11 @@ However, it is unreasonable to assume zero moment transfer! Especially not for e
 
 The slab moment transferred into the columns is known as **unbalanced moment** ($M_{sc}$). The reason it is called "unbalanced" is because of the vertical offsets present in the slab moment diagram. I don't like this name because everything is balanced for static equilibrium. If we plot the moment diagram for an floor assembly, we see exactly where that unbalanced moment is going: into the columns. 
 
-<img src="./doc/theory4.png" width="50%">
+<p align="center"><img src="./doc/theory4.png" width="50%"></p>
 
 This unbalanced moment can transfer into the columns in two ways: 1.) flexure within a transfer width, and 2.) eccentric shear. The second load path is of interest for us because it amplifies shear stress. 
 
-<img src="./doc/theory5.png" width="30%">
+<p align="center"><img src="./doc/theory5.png" width="30%"></p>
 
 To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the elastic stress equations with see in college textbooks ($P/A + Mc/I$):
 
