@@ -501,7 +501,7 @@ First, we break the 3-D shear perimeter into individual rectangular areas:
 
 <p align="center"><img src="./doc/theory10.png" width="100%"></p>
 
-This is a little convoluted. Here's how I remember what to do: **calculate $I_x$, $I_y$, and $Ad^2$ for the "web" area, then calculate $Ad^2$ terms for the "flange" areas. **
+This is a little convoluted. Here's how I remember what to do: **calculate $I_x$, $I_y$, and $Ad^2$ for the "web" area, then calculate $Ad^2$ terms for the "flange" areas.**
 
 For example, let's look at the interior condition in the figure above. For the two flange areas highlighted in blue, we only count the $A d^2$ term:
 
@@ -517,23 +517,62 @@ Finally, putting all the pieces together, we arrive at the same equation as abov
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
-Despite the name "polar moment of inertia", this $J_c$ term is used in the ACI expression more like a regular moment of inertia. Typically, polar moment of inertia ($I_z$ or $J$) is associated with in-plane torsion, whereas the planar moment of inertia ($I_x$ and $I_y$) are associated with out-of-plane flexure.
-
 We now have all the pieces to calculate the punching shear stress. Here is the ACI formula again. 
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
 
+
 Please note that although there is a $\pm$ for the second term, unbalanced moment is usually not symmetrical where both negative and positive magnitudes are possible. Consider an edge column, the unbalanced moment is always on one-side!
 
-### 3.0 Introducing Complexities
+
+
+### 3.0 Adding Complexity
+
+Hopefully the previous section is not too confusing, if so, it is only going to get worse. In practice, the formulations above are easily strained by real-life design scenarios. Let's muddy the water a little bit.
+
+**Complexity #1: Why Is $J$ a Polar Moment of Inertia?**
+
+Despite the name "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least in the way it is used. In any mechanics of material textbooks, polar moment of inertia ($I_z$ or $J$) is introduced as a property associated with in-plane torsion. For any section, there is only one possible $I_z$. On the other hand, the planar moments of inertia are introduces as properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$) . 
+
+The use of $J$ to represent non-polar moment of inertia in concrete design is an incredibly confusing anti-pattern. If we refer to concrete design guides, we see that it is indeed possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
+
+$$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
+
+$$J_{cy} = 2(\frac{d b_2^3}{12}+\frac{b_2 d^3}{12}) + 2(b_1 d) (b_2/2)^2$$
 
 
 
-* What about bi-axial flexure?
-* What about sections with slanted surface?
-* What about sections with openings nearby?
-* offset between centroids
-* principal orientation
+**Complexity #2: What About Unbalanced Moment About Both Axes?**
+
+The natural follow up question is if we ever need to calculate both $J_{cx}$ and $J_{cy}$. There [has been plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered at the same time, or one axis at a time and take the worst. Based on the Eng-Tip discussion linked above, it seems like considering bi-axial moment will yield the maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I'll leave the engineering judgement to the reader.
+
+Here's the full shear stress equation if we were to consider moment about both axes.
+
+$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
+
+
+
+**Complexity #3: What About Nearby Openings?**
+
+
+
+**Complexity #4: What About Edge Conditions With Large Overhang?**
+
+
+
+**Complexity #5: How To Calculate J for Section With Slanted Surfaces?**
+
+
+
+**Complexity #6: Corner Column Principal Orientation?**
+
+
+
+**Complexity #7: Offset Between Column Centroid and Critical Section Centroid?**
+
+
+
+
 
 
 
@@ -554,27 +593,14 @@ Please note that although there is a $\pm$ for the second term, unbalanced momen
 
 
 
-### 7.0 Other Nuances
+### 7.0 What About Allowable Shear Capacity?
 
-**What About Allowable Shear Capacity?**
 
 I've written in great length about how to determine the shear stress **demand**. But what about allowable shear **capacity**? Unfortunately, I will not be covering capacity in detail here. Concrete strength is mostly empirical and based on experimental testing. I don't think there's anything theoretically interesting. In general, the building code specifies an allowable shear stress ranging from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
 
 Wthisj will not calculate punching shear capacity. Please refer to the building code for more guidance. 
 
 
-
-Because we can calculate an $J_c$ for both orthogonal axes. In fact, here's $J_{cx}$ and $J_{cy}$ for the interior condition above.
-
-$$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
-
-$$J_{cy} = 2(\frac{d b_2^3}{12}+\frac{b_2 d^3}{12}) + 2(b_1 d) (b_2/2)^2$$
-
-There [has been plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether we need to consider unbalanced moment about both principal axes at the same time, or one at a time and take the worst. Based on the Eng-Tip discussion linked above, it seems like considering bi-axial moment will get you the maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. Here's the full shear stress equation if we were to consider moment about both axes.
-
-$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
-
-According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement dissappeared in the latest report (ACI 421.1R-20). I'll leave the engineering judgement to the reader.
 
 
 
