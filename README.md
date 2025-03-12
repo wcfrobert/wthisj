@@ -421,35 +421,35 @@ column1.rotate(angle=45)
 
 ### 1.0 Introduction
 
-Two-way shear - known colloquially as punching shear - is a load transfer mechanism between concrete slabs and its supporting columns. This type of load transfer is unique to a special type of floor system called **flat plate**, whereby the slab is supported directly by columns; no beams, no girders, just a smooth monolithic plate.
+Two-way shear - known colloquially as punching shear - is a load transfer mechanism between concrete slabs and its supporting columns. This type of load transfer is unique to a special type of floor system called **flat plate** (or flat slab where drop panel or column caps are present). In a flat plate system, the slab is supported directly by columns; no beams, no girders, just a smooth monolithic plate.
 
-In the figure below, we see two types of concrete floor systems. The one on the left is a more traditional approach, whereby the slab is supported by intersecting beams, which then transfer the load to the columns. The modern approach, shown on the right, has a completely flat soffit, and eliminates the need to any beams at all.
+In the figure below, we see two types of concrete floor systems. The one on the left is more traditional, whereby the slab is supported by intersecting beams, which then transfer the load to the columns. The modern approach, shown on the right, has a completely flat soffit without any beams.
 
 <p align="center"><img src="./doc/theory1.png" width="70%"></p>
 
-It is easy to see why beam-supported slab systems have fallen out of favor. Beams and girders must be shaped with formwork, which means more carpentry work, which means more labor, higher cost, and longer construction time. On the other hand, flat plate slabs are easier to build, reduce complexity in terms of detailing, give MEP trade partners full flexibility in the ceiling space (no more coring through beams), and minimize formwork (see [flying form](https://www.concrete.org.uk/fingertips-nuggets.asp?cmd=display&id=536)). Furthermore, the shallow floor depths means more floors can fit within the same building height constraint. This is a no-brainer decision for developers. Most concrete high-rises in the US today have flat plate floor systems. 
+It is easy to see why beam-supported slab systems have fallen out of favor. Beams and girders must be shaped with formwork, which means more carpentry work, which means more labor, higher cost, and longer construction time. On the other hand, flat plate slabs are easier to build, reduce complexity in terms of detailing, give MEP trade partners full flexibility in the ceiling space, and minimize formwork (see [flying form](https://www.concrete.org.uk/fingertips-nuggets.asp?cmd=display&id=536)). Furthermore, the shallow floor depths means more floors can fit within the same building height constraint. This is a no-brainer decision for developers. Most concrete high-rises in the US today have flat plate floor systems. 
 
-So what is the trade-off? The lack of supporting beams means **less redundancy** and **high shear stress** around the supporting columns. If improperly design, flat plates can fail like a pencil through paper, and if the slab fails, that's game over. The figure below is an illustration of punching shear failure. The photo on the left is a garage in the UK (Piper's Row Car Park, Wolverhampton) built in the 1960s. Punching shear failures are absolutely catastrophic and keeps engineers up at night. Needless to say, the accurate evaluation of punching shear has become critically important in concrete slab design.
+So what is the trade-off? The lack of supporting beams means **less redundancy** and **high shear stress** around the supporting columns. If improperly design, flat plates can fail like a pencil through paper, and if the slab fails, it's game over. The figure below is an illustration of punching shear failure. The photo on the left is a garage in the UK (Piper's Row Car Park, Wolverhampton) built in the 1960s. Needless to say, the accurate evaluation of punching shear has become critically important in concrete slab design.
 
 <p align="center"><img src="./doc/theory2.png" width="50%"></p>
 
-### 2.0 Punching Shear Calculation Per ACI-318
+### 2.0 Punching Shear Per ACI-318
 
-The evaluation of punching shear is conceptually simple (we will gradually introduce more nuances). The shear stress is equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is an inverted truncated cone. To simplify, ACI-318 allows the critical **shear perimeter** to be approximated as being d/2 offset from the column face. The critical shear section is shown in the figure below in dotted line. 
+The evaluation of punching shear is conceptually simple (for now... we will introduce more nuances later on). The shear stress is simply equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as four rectangular faces offset d/2 from the column face (shown in dotted line below).
 
 <p align="center"><img src="./doc/theory3.png" width="40%"></p>
 
-Therefore, the total shear area of the critical section is equal to the perimeter ($b_o$) times the slab depth ($d$). Note slab depth is measured from the extreme compression fiber to tension rebar (taking the average depth of the two-orthogonal rebar directions).
+Therefore, the total shear area is equal to the perimeter ($b_o$) times the slab depth ($d$). Note slab depth is measured from the extreme compression fiber to tension rebar (taking the average depth of the two-orthogonal rebar directions).
 
 $$A_v = b_o d$$
 
-Taken together, the punching shear stress (**assuming negligible moment transfer**) is equal to the total shear demand ($V_u$) on the column, divided by the shear area. Note concrete design is very empirical which is why we only care about the average shear stress.
+Therefore, the punching shear stress, **assuming negligible moment transfer**, is equal to the total shear demand ($V_u$) on the column, divided by the shear area. Concrete design is very empirical which is why we only care about the average shear stress.
 
 $$v_u = \frac{V_u}{b_od}$$
 
-In practice, the equation above is only really good as a preliminary estimate. Moment transfer can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is almost always unreasonable to assume zero moment transfer, especially at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. Moment transfer is only negligible in an idealized world where cows are spheres and there's no friction (i.e. in classrooms).
+In practice, the equation above is only good for preliminary estimates. Moment transfers are always present, and can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is not reasonable to assume zero moment transfer, especially at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. 
 
-To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas we see in college textbooks ($P/A + Mc/I$), but not exactly. Below is an illustration of the superposition of shear stresses from the [Macgregor Textbook](https://www.amazon.com/Reinforced-Concrete-Mechanics-Design-6th/dp/0132176521) (slightly modified). By the way, this textbook is one of the greatest of all time. I'm a huge fan of Dr. MacGregor, not least because he is also Canadian.
+To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas we see in college textbooks ($P/A + Mc/I$), but not exactly. Below is an illustration of the superposition of shear stresses from the [Macgregor Textbook](https://www.amazon.com/Reinforced-Concrete-Mechanics-Design-6th/dp/0132176521) (slightly modified). As an aside, this textbook is my all time favorite. I'm a huge fan of Dr. MacGregor, not least because he is also Canadian.
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
 
@@ -474,46 +474,40 @@ The unbalanced moment described above can transfer into the columns in two ways:
 
 <p align="center"><img src="./doc/theory5.png" width="40%"></p>
 
-We use the Greek letter ($\gamma$) to denote the percentage of moment transferred through each mode. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest to us because it will amplify shear stress.
-
-ACI-318 has equations for estimating $\gamma_f$ and $\gamma_v$ based on the critical shear section dimension. For instance, a square column would have a moment transfer ratio of 60% through flexure, and 40% through shear.
+We use the Greek letter ($\gamma$) to denote the percentage of moment transferred through each mode. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest to us because it will amplify shear stress. ACI-318 has equations for estimating $\gamma_f$ and $\gamma_v$ based on the critical shear section dimension.
 
 $$\gamma_f = \frac{1}{1+2/3\sqrt{\frac{b_1}{b_2}}}$$
 
 $$\gamma_v = 1 - \gamma_f$$
 
-$b_1$ is the critical perimeter dimension parallel to the slab span, whereas $b_2$ is the critical perimeter dimension perpendicular to the slab span. See figure below for an illustration. 
+For example, a square column would have a moment transfer ratio of 60% through flexure, and 40% through shear. $b_1$ is the critical perimeter dimension parallel to the slab span, whereas $b_2$ is the critical perimeter dimension perpendicular to the slab span. See figure below for an illustration. 
 
 <p align="center"><img src="./doc/theory6.png" width="100%"></p>
 
 **Distance From Perimeter Centroid ($c$)**
 
-The parameter c is the distance from the centroid to any fiber in the parameter. This distance is measured orthogonal to the applied moment vector. We usually only care about the fiber furthest away where the shear stress will be highest.
+The parameter c is the distance from the centroid to any fiber in the parameter. This distance is measured orthogonal to the applied moment vector. We usually only care about the fiber furthest away where the shear stress will be highest. It should be noted that the critical shear perimeter's centroid does not always coincide with the column's centroid, we will discuss this offset in a later section.
 
 <p align="center"><img src="./doc/theory9.png" width="70%"></p>
 
-It should be noted that the critical shear perimeter's centroid does not always coincide with the column's centroid. As we see in the figure below.
-
-<p align="center"><img src="./doc/theory8.png" width="60%"></p>
-
 **"Polar Moment of Inertia" ($J_c$)**
 
-$J_c$ is often referred to as a section property analogous to polar moment of inertia. There are many design tables and formulas to help you calculate J. Rather than just giving you some formulas and saying "trust me bro", let's go through the derivations step-by-step. The calculation procedure for J is vaguely reminiscent of calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic grasp of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
+$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than just giving you some formulas, let's go through the derivations step-by-step. The calculation procedure for J is vaguely reminiscent of calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic grasp of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
 
 First, we break the 3-D shear perimeter into individual rectangular areas:
 
-* For the areas **perpendicular** to the moment vector (highlighted green below), we add up its $I_x$ and $I_y$ as well as any $Ad^2$ terms if applicable. I think of this area as the "web".
-* For the areas **parallel** with the moment vector (highlighted blue below), we calculate only its $A d^2$ term and ignore the rest. I think of this area as the "flange".
+* For the areas **perpendicular** to the moment vector (highlighted green below), we add up its $I_x$ and $I_y$ as well as any $Ad^2$ terms if applicable. I think of this area as the "**web**".
+* For the areas **parallel** with the moment vector (highlighted blue below), we calculate only its $A d^2$ term and ignore the rest. I think of this area as the "**flange**".
 
 <p align="center"><img src="./doc/theory10.png" width="100%"></p>
 
-This is all a little convoluted. Here's how I remember what to do: **calculate $I_x$, $I_y$, and $Ad^2$ for the "web" area, then calculate $Ad^2$ terms for the "flange" areas. For example, let's look at the interior condition in the figure above.** 
+This is a little convoluted. Here's how I remember what to do: **calculate $I_x$, $I_y$, and $Ad^2$ for the "web" area, then calculate $Ad^2$ terms for the "flange" areas. **
 
-For the two flange areas highlighted in blue, we only count the $A d^2$ term:
+For example, let's look at the interior condition in the figure above. For the two flange areas highlighted in blue, we only count the $A d^2$ term:
 
 $$Ad^2 = (b_2 d) (b_1/2)^2$$
 
-For the two web areas highlighted in green, we count both the the  $I_x$ and $I_y$ term. Because the centroid of green rectangle coincide with the centroid of the shear perimeter, we do not need to add an additional $A d^2$ term.
+For the two web areas highlighted in green, we count both the the  $I_x$ and $I_y$ term. Because the centroid of green rectangle coincide with the centroid of the shear perimeter, we do not need to consider an additional $A d^2$ term (because d is 0).
 
 $$I_x = \frac{d b_1^3}{12}$$
 
@@ -523,7 +517,54 @@ Finally, putting all the pieces together, we arrive at the same equation as abov
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
-One important thing to note is that despite the name "polar moment of inertia", this term is more like a regular "moment of inertia". Because we can calculate an $J_c$ for both orthogonal axes. In fact, here's $J_{cx}$ and $J_{cy}$ for the interior condition above.
+Despite the name "polar moment of inertia", this $J_c$ term is used in the ACI expression more like a regular moment of inertia. Typically, polar moment of inertia ($I_z$ or $J$) is associated with in-plane torsion, whereas the planar moment of inertia ($I_x$ and $I_y$) are associated with out-of-plane flexure.
+
+We now have all the pieces to calculate the punching shear stress. Here is the ACI formula again. 
+
+$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
+
+Please note that although there is a $\pm$ for the second term, unbalanced moment is usually not symmetrical where both negative and positive magnitudes are possible. Consider an edge column, the unbalanced moment is always on one-side!
+
+### 3.0 Introducing Complexities
+
+
+
+* What about bi-axial flexure?
+* What about sections with slanted surface?
+* What about sections with openings nearby?
+* offset between centroids
+* principal orientation
+
+
+
+### 4.0 Background Info on J
+
+
+
+
+
+
+
+### 5.0 Elastic Method
+
+
+
+### 6.0 Numerical Approximation with wthisj
+
+
+
+
+### 7.0 Other Nuances
+
+**What About Allowable Shear Capacity?**
+
+I've written in great length about how to determine the shear stress **demand**. But what about allowable shear **capacity**? Unfortunately, I will not be covering capacity in detail here. Concrete strength is mostly empirical and based on experimental testing. I don't think there's anything theoretically interesting. In general, the building code specifies an allowable shear stress ranging from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
+
+Wthisj will not calculate punching shear capacity. Please refer to the building code for more guidance. 
+
+
+
+Because we can calculate an $J_c$ for both orthogonal axes. In fact, here's $J_{cx}$ and $J_{cy}$ for the interior condition above.
 
 $$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
@@ -533,38 +574,7 @@ There [has been plenty of debate](https://www.eng-tips.com/threads/punching-shea
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
 
-According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. I'll leave the engineering judgement to the reader.
-
-We now have all the pieces to calculate the punching shear stress. 
-
-**What About Allowable Shear Capacity?**
-
-I've written in great length about how to determine the shear stress **demand**. But what about allowable shear **capacity**? Sadly, I will not be covering capacity in detail here. Calculating punching shear capacity is left as an exercise for the reading; wthisj will not calculate it. Please refer to the building code for more detail. In general, the allowable shear stress ranges from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
-
-
-
-
-
-
-
-### 2.0 Background Info on J
-
-
-
-
-
-### 3.0 Elastic Method
-
-
-
-### 4.0 Numerical Approximation with wthisj
-
-
-
-
-### 5.0 Other Nuances
-
-
+According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement dissappeared in the latest report (ACI 421.1R-20). I'll leave the engineering judgement to the reader.
 
 
 
