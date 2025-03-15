@@ -183,19 +183,12 @@ pip install wthisj
 
 Here are all the public methods available to the user:
 
-### Step 1: Defining a Punching Shear Perimeter
-
 - `PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
 - `PunchingShearSection.add_perimeter(start, end, depth)`
 - `PunchingShearSection.add_opening(dx, dy, width, height)`
 - `PunchingShearSection.rotate(angle)`
 
-### Step 2: Running an Analysis
-
 - `PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`
-
-
-### Step 3: Plotting Results
 
 - `PunchingShearSection.preview()`
 - `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
@@ -433,7 +426,7 @@ So what is the trade-off? The lack of supporting beams means **less redundancy**
 
 <p align="center"><img src="./doc/theory2.png" width="50%"></p>
 
-### 2.0 Punching Shear Per ACI-318
+### 2.0 Punching Shear
 
 The evaluation of punching shear is conceptually simple (for now... we will introduce more nuances later on). The shear stress is simply equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as four rectangular faces offset d/2 from the column face (shown in dotted line below).
 
@@ -522,19 +515,23 @@ We now have all the pieces to calculate the punching shear stress. Here is the A
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
 
 
-Please note that although there is a $\pm$ for the second term, unbalanced moment is usually not symmetrical where both negative and positive magnitudes are possible. Consider an edge column, the unbalanced moment is always on one-side!
+Please note that although there is a $\pm$ for the second term, unbalanced moment is typically not symmetrical where both negative and positive magnitudes are possible. Consider an edge column, the unbalanced moment is always on one-side.
 
 
 
-### 3.0 Adding Complexity
+### 3.0 Nuances
 
-Hopefully the previous section is not too confusing, if so, it is only going to get worse. In practice, the formulations above are easily strained by real-life design scenarios. Let's muddy the water a little bit.
+Hopefully the previous section is not too confusing, if so, it is only going to get worse. In practice, the formulations above are easily strained by real design scenarios. Let's dive into a few rabbit holes.
 
-**Complexity #1: Why Is $J$ a Polar Moment of Inertia?**
+**Complexity #1: Why Is $J$ called a Polar Moment of Inertia?**
 
-Despite the name "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least in the way it is used. In any mechanics of material textbooks, polar moment of inertia ($I_z$ or $J$) is introduced as a property associated with in-plane torsion. For any section, there is only one possible $I_z$. On the other hand, the planar moments of inertia are introduces as properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$) . 
+Despite being called a "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least based on the way it is used. In mechanics of materials, polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion. For a section, there is only one possible $J$. On the other hand, the planar moments of inertia are properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$). Here are the elastic stress formulas:
 
-The use of $J$ to represent non-polar moment of inertia in concrete design is an incredibly confusing anti-pattern. If we refer to concrete design guides, we see that it is indeed possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
+$$\mbox{in-plane torsion} \rarr \tau =Tr/J$$
+
+$$\mbox{out-of-plane flexure}\rarr \sigma =My/I_x \mbox{ and } \sigma=Mx/I_y$$
+
+The use of $J$ to represent non-polar moment of inertia in concrete design is a confusing anti-pattern. If we refer to concrete design guides, we see that it is indeed possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
 
 $$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
@@ -542,17 +539,25 @@ $$J_{cy} = 2(\frac{d b_2^3}{12}+\frac{b_2 d^3}{12}) + 2(b_1 d) (b_2/2)^2$$
 
 
 
-**Complexity #2: What About Unbalanced Moment About Both Axes?**
+**Complexity #2: Should We consider Unbalanced Moment About Both Axes?**
 
-The natural follow up question is if we ever need to calculate both $J_{cx}$ and $J_{cy}$. There [has been plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered at the same time, or one axis at a time and take the worst. Based on the Eng-Tip discussion linked above, it seems like considering bi-axial moment will yield the maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I'll leave the engineering judgement to the reader.
+The natural follow up question is whether we need to use $J_{cx}$ and $J_{cy}$ at the same time for bi-axial moment. There's [plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time and take the worst. Based on the Eng-Tip discussion linked above, it seems like considering bi-axial moment will yield the maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I'll leave the engineering judgement to the reader. 
 
-Here's the full shear stress equation if we were to consider moment about both axes.
+Here's the full shear stress equation if we were to consider unbalanced moment about both axes.
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
 
 
 
-**Complexity #3: What About Nearby Openings?**
+**Complexity #3: What if There are Nearby Openings?**
+
+If there are openings near the critical shear perimeter (closer than $4h$ according to ACI 318-19 22.6.4.3), the shear perimeter ($b_o$) is reduced, resulting in a reduction in punching shear capacity. 
+
+To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration. I do not know a single engineer who does this reduction by hand. Most would use some kind of CAD software to get the reduced $b_o$. 
+
+wthisj considers nearby openings by converting all geometry to polar coordinate. Each opening added by the user is converted into a "$\theta$ deletion range". The discretized section fibers are deleted if they fall within this range.
+
+<p align="center"><img src="./doc/theory11.png" width="70%"></p>
 
 
 

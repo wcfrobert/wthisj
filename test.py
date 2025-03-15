@@ -11,22 +11,22 @@ column1 = wthisj.PunchingShearSection(width = 24,
 
 # add openings
 # column1.add_opening(dx=0, dy=-80, width=36, height=24)
-# column1.add_opening(dx=80, dy=0, width=12, height=12)
+# column1.add_opening(dx=40, dy=0, width=12, height=12)
 
 # preview geometry
-#column1.preview()
+column1.preview()
 
-# calculate punching shear stress
-results = column1.solve(P = -20,
-                        Mx = 0,
-                        My = 400,
-                        consider_Pe=False,
-                        auto_rotate=True, 
-                        verbose=True)
+# # calculate punching shear stress
+# results = column1.solve(P = -20,
+#                         Mx = 0,
+#                         My = 400,
+#                         consider_Pe=False,
+#                         auto_rotate=True, 
+#                         verbose=True)
 
-# plot results
-#column1.plot_results()
-column1.plot_results_3D()
+# # plot results
+# #column1.plot_results()
+# column1.plot_results_3D()
 
 
 
