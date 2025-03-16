@@ -428,23 +428,25 @@ So what is the trade-off? The lack of supporting beams means **less redundancy**
 
 ### 2.0 Punching Shear
 
-The evaluation of punching shear is conceptually simple (for now... we will introduce more nuances later on). The shear stress is simply equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as four rectangular faces offset d/2 from the column face (shown in dotted line below).
+Let's start simple and introduce nuances later on. For now, the shear stress is simply equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as four rectangular faces offset d/2 from the column face (shown in dotted line below).
 
 <p align="center"><img src="./doc/theory3.png" width="40%"></p>
 
-Therefore, the total shear area is equal to the perimeter ($b_o$) times the slab depth ($d$). Note slab depth is measured from the extreme compression fiber to tension rebar (taking the average depth of the two-orthogonal rebar directions).
+Therefore, the total shear area is equal to the perimeter ($b_o$) times the slab depth ($d$). Slab depth is measured from the extreme compression edge to tension rebar centroid (taking the average depth of the two-orthogonal directions).
 
 $$A_v = b_o d$$
 
-Therefore, the punching shear stress, **assuming negligible moment transfer**, is equal to the total shear demand ($V_u$) on the column, divided by the shear area. Concrete design is very empirical which is why we only care about the average shear stress.
+Therefore, the punching shear stress, **with negligible moment transfer**, is equal to the total shear demand ($V_u$) on the column, divided by the shear area. Concrete design is very empirical which is why we only care about the average shear stress.
 
 $$v_u = \frac{V_u}{b_od}$$
 
 In practice, the equation above is only good for preliminary estimates. Moment transfers are always present, and can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is not reasonable to assume zero moment transfer, especially at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. 
 
-To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas we see in college textbooks ($P/A + Mc/I$), but not exactly. Below is an illustration of the superposition of shear stresses from the [Macgregor Textbook](https://www.amazon.com/Reinforced-Concrete-Mechanics-Design-6th/dp/0132176521) (slightly modified). As an aside, this textbook is my all time favorite. I'm a huge fan of Dr. MacGregor, not least because he is also Canadian.
+To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined stress formulas we see in material mechanics textbooks ($P/A + My/I$), but not exactly. Below is an illustration of the superposition of shear stresses from the [Macgregor Textbook](https://www.amazon.com/Reinforced-Concrete-Mechanics-Design-6th/dp/0132176521) (slightly modified). I love this textbook and I'm a huge fan of Dr. MacGregor, not least because he is also Canadian.
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
+
+Please note that although there is a $\pm$ sign for the second term, unbalanced moment is not always symmetrical where both negative and positive magnitudes are possible. For example, an edge column will always have unbalanced moment directed on one-side.
 
 <p align="center"><img src="./doc/theory7.png" width="100%"></p>
 
@@ -452,7 +454,7 @@ Let's go through the variables in the second term one-by-one.
 
 **Unbalanced Moment ($M_{sc}$)**
 
-The slab moment transferred into the supporting column is known as **unbalanced moment** ($M_{sc}$). The reason it is called "unbalanced" is because of the vertical offsets present in the slab moment diagram. I don't like this naming because everything is balanced for static equilibrium. If we plot the moment diagram for the entire floor assembly, we see exactly where that unbalanced moment is going: into the columns. 
+The slab moment transferred into the supporting column is known as **unbalanced moment** ($M_{sc}$). The reason it is called "unbalanced" is because of the vertical offsets present in the slab moment diagram. I don't like this naming because everything is balanced for static equilibrium. If we plot the moment diagram for the entire floor assembly, we see exactly where the unbalanced moment is going: into the columns. 
 
 <p align="center"><img src="./doc/theory4.png" width="50%"></p>
 
@@ -467,7 +469,7 @@ The unbalanced moment described above can transfer into the columns in two ways:
 
 <p align="center"><img src="./doc/theory5.png" width="40%"></p>
 
-We use the Greek letter ($\gamma$) to denote the percentage of moment transferred through each mode. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest to us because it will amplify shear stress. ACI-318 has equations for estimating $\gamma_f$ and $\gamma_v$ based on the critical shear section dimension.
+We use the Greek letter ($\gamma$) to denote the percentage of moment transferred through each mode. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest to us because it will amplify shear stress. ACI-318 has equations for estimating $\gamma_f$ and $\gamma_v$ based on the critical shear section dimensions.
 
 $$\gamma_f = \frac{1}{1+2/3\sqrt{\frac{b_1}{b_2}}}$$
 
@@ -479,28 +481,30 @@ For example, a square column would have a moment transfer ratio of 60% through f
 
 **Distance From Perimeter Centroid ($c$)**
 
-The parameter c is the distance from the centroid to any fiber in the parameter. This distance is measured orthogonal to the applied moment vector. We usually only care about the fiber furthest away where the shear stress will be highest. It should be noted that the critical shear perimeter's centroid does not always coincide with the column's centroid, we will discuss this offset in a later section.
+The parameter c is the distance from the <u>centroid of the shear section</u> to any fiber in the parameter. We usually only care about the fiber furthest away where the shear stress will be highest. It is important to note that the shear section centroid does NOT always coincide with the column centroid! 
 
-<p align="center"><img src="./doc/theory9.png" width="70%"></p>
+
 
 **"Polar Moment of Inertia" ($J_c$)**
 
-$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than just giving you some formulas, let's go through the derivations step-by-step. The calculation procedure for J is vaguely reminiscent of calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic grasp of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
+$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than just giving you some formulas, let's go through the derivations step-by-step. The calculation procedure for J is vaguely reminiscent of calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic understanding of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
 
-First, we break the 3-D shear perimeter into individual rectangular areas:
+$$I = \sum I_i+A_id_i^2$$
 
-* For the areas **perpendicular** to the moment vector (highlighted green below), we add up its $I_x$ and $I_y$ as well as any $Ad^2$ terms if applicable. I think of this area as the "**web**".
-* For the areas **parallel** with the moment vector (highlighted blue below), we calculate only its $A d^2$ term and ignore the rest. I think of this area as the "**flange**".
+First, we break the 3-D shear section into individual rectangular areas:
+
+* For the areas perpendicular to the moment vector (highlighted green below), we add up its $I_x$ and $I_y$ as well as any $Ad^2$ terms. I think of this area as the "**web**".
+* For the areas parallel with the moment vector (highlighted blue below), we calculate only its $A d^2$ term and ignore the rest. I think of this area as the "**flange**".
 
 <p align="center"><img src="./doc/theory10.png" width="100%"></p>
 
-This is a little convoluted. Here's how I remember what to do: **calculate $I_x$, $I_y$, and $Ad^2$ for the "web" area, then calculate $Ad^2$ terms for the "flange" areas.**
+This is a little convoluted. Here's how I remember what to do: **calculate $I_x$, $I_y$, and $Ad^2$ for the "web" area, then calculate $Ad^2$ terms for the "flange" areas.** Let's derive the formulas for the interior condition in the figure above to clarify.
 
-For example, let's look at the interior condition in the figure above. For the two flange areas highlighted in blue, we only count the $A d^2$ term:
+For the two flange areas highlighted in blue, we only count the $A d^2$ term:
 
 $$Ad^2 = (b_2 d) (b_1/2)^2$$
 
-For the two web areas highlighted in green, we count both the the  $I_x$ and $I_y$ term. Because the centroid of green rectangle coincide with the centroid of the shear perimeter, we do not need to consider an additional $A d^2$ term (because d is 0).
+For the two web areas highlighted in green, we count both the the  $I_x$ and $I_y$ term. Since the centroid of green rectangle coincide with the centroid of the shear perimeter, we do not need to consider the $A d^2$ term (because d is 0).
 
 $$I_x = \frac{d b_1^3}{12}$$
 
@@ -510,28 +514,25 @@ Finally, putting all the pieces together, we arrive at the same equation as abov
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
-We now have all the pieces to calculate the punching shear stress. Here is the ACI formula again. 
-
-$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
-
-
-Please note that although there is a $\pm$ for the second term, unbalanced moment is typically not symmetrical where both negative and positive magnitudes are possible. Consider an edge column, the unbalanced moment is always on one-side.
+We now have all the pieces to calculate the punching shear stress. 
 
 
 
-### 3.0 Nuances
+### 3.0 Nuances To Consider
 
-Hopefully the previous section is not too confusing, if so, it is only going to get worse. In practice, the formulations above are easily strained by real design scenarios. Let's dive into a few rabbit holes.
+In practice, the formulations above are easily strained by real design scenarios. Let's consider some of the nuances that one may encounter.
 
-**Complexity #1: Why Is $J$ called a Polar Moment of Inertia?**
+**Nuance #1: Is $J$ Calculated Differently For The X and Y Axes?**
 
-Despite being called a "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least based on the way it is used. In mechanics of materials, polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion. For a section, there is only one possible $J$. On the other hand, the planar moments of inertia are properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$). Here are the elastic stress formulas:
+Yes. Despite being called a "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least based on the way it is used. In mechanics of materials, polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion. There is only one possible $J$ for any cross section. On the other hand, the planar moments of inertia are properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$). The planar and polar moments of inertia are related like so:
 
-$$\mbox{in-plane torsion} \rarr \tau =Tr/J$$
+$$I_z = J = I_x + I_y$$
 
-$$\mbox{out-of-plane flexure}\rarr \sigma =My/I_x \mbox{ and } \sigma=Mx/I_y$$
+$$\mbox{shear stress due to torsion}: \tau =Tr/J$$
 
-The use of $J$ to represent non-polar moment of inertia in concrete design is a confusing anti-pattern. If we refer to concrete design guides, we see that it is indeed possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
+$$\mbox{normal stress due to flexure}: \sigma = My/I_x \mbox{ and } \sigma=Mx/I_y$$
+
+The use of $J$ to represent non-polar moment of inertia in concrete design is an anti-pattern. Indeed, it is possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
 
 $$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
@@ -539,9 +540,9 @@ $$J_{cy} = 2(\frac{d b_2^3}{12}+\frac{b_2 d^3}{12}) + 2(b_1 d) (b_2/2)^2$$
 
 
 
-**Complexity #2: Should We consider Unbalanced Moment About Both Axes?**
+**Nuance #2: Should We consider Unbalanced Moment About Both Axes?**
 
-The natural follow up question is whether we need to use $J_{cx}$ and $J_{cy}$ at the same time for bi-axial moment. There's [plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time and take the worst. Based on the Eng-Tip discussion linked above, it seems like considering bi-axial moment will yield the maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I'll leave the engineering judgement to the reader. 
+The natural follow up question is whether we need to use $J_{cx}$ and $J_{cy}$ at the same time for bi-axial moment. There's [plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time. Calculating stress due to bi-axial moment will yield a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I do not think there is consensus yet. I'll leave the engineering judgement to the reader. 
 
 Here's the full shear stress equation if we were to consider unbalanced moment about both axes.
 
@@ -549,31 +550,52 @@ $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{
 
 
 
-**Complexity #3: What if There are Nearby Openings?**
+**Nuance #3: How Does Nearby Openings Impact Punching Shear?**
 
-If there are openings near the critical shear perimeter (closer than $4h$ according to ACI 318-19 22.6.4.3), the shear perimeter ($b_o$) is reduced, resulting in a reduction in punching shear capacity. 
-
-To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration. I do not know a single engineer who does this reduction by hand. Most would use some kind of CAD software to get the reduced $b_o$. 
-
-wthisj considers nearby openings by converting all geometry to polar coordinate. Each opening added by the user is converted into a "$\theta$ deletion range". The discretized section fibers are deleted if they fall within this range.
+According to ACI 318-19 22.6.4.3, If an opening is closer than $4h$ to the critical shear perimeter, the shear perimeter ($b_o$) must be reduced and thus overall punching shear stress increases. To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration:
 
 <p align="center"><img src="./doc/theory11.png" width="70%"></p>
 
+In practice, most engineers use some kind of CAD software to avoid doing the geometry puzzle. There are two additional consequences that's not often talked about:
 
-
-**Complexity #4: What About Edge Conditions With Large Overhang?**
-
-
-
-**Complexity #5: How To Calculate J for Section With Slanted Surfaces?**
+* The addition of openings shifted the perimeter centroid (see nuance #5).
+* The addition of opening shifted the principal axes orientation. The section above must be rotated 28 degrees to its principal geometry - where $I_{xy}=0$ - otherwise equilibrium will not hold. (see nuance #6).
 
 
 
-**Complexity #6: Corner Column Principal Orientation?**
+**Nuance #4: Edge or Corner Conditions With Large Overhang**
+
+At edge or corner columns, the slab may cantilever out beyond the face of the column. According to ACI 318-19 22.6.4.1, the perimeter of the critical section shall be a minimum. We will interpret this to mean that the overhang cannot provide more perimeter than if the column were on the interior. If we do the math, the limit works out to be $c_2/2 +d$. Where $d$ is the average slab depth, and $c_2$ is the column dimension parallel to the slab edge. 
+
+$$\mbox{max overhang} = c_2/2 + d$$
+
+<p align="center"><img src="./doc/theory12.png" width="70%"></p>
 
 
 
-**Complexity #7: Offset Between Column Centroid and Critical Section Centroid?**
+**Nuance #5: What Happens When Critical Perimeter Centroid Does Not Coincide With Column Centroid?**
+
+For edge and corner conditions, the shear perimeter centroid will always be offset from the column centroid. Even for interior conditions, sometimes the centroids will not coincide as we have seen in Nuance #3. The centroid offset is illustrated below.
+
+<p align="center"><img src="./doc/theory8.png" width="60%"></p>
+
+There are two important ramifications:
+
+* Firstly, the neutral axis is located at the shear perimeter centroid, NOT the column centroid. Therefore, the $c$ variable in $\gamma_v Mc/J$ must be with respect to the perimeter centroid. We can calculate the perimeter centroid using the first moment of area formulas:
+
+$$x_c = \frac{\sum xA}{\sum A} \mbox{ and } y_c = \frac{\sum yA}{\sum A}$$
+
+* Secondly, since shear demand is usually derived from FEM software that reports $M_u$ and $V_u$ at the column centroid, there must be an moment adjustment.
+
+$$M_{sc,x} = M_{sc,xO} - V_u (e_y)$$
+
+$$M_{sc,y} = M_{sc,yO} + V_u (e_x)$$
+
+<p align="center"><img src="./doc/theory9.png" width="60%"></p>
+
+This moment adjustment is kind of tricky. Firstly, the $Pe$ moment adjustment is almost always subtractive from the applied moment (i.e. acts in the opposite direction). In other words, it is usually more conservative to ignore it. But depending on the shear demand $V_u$, it may be overly conservative to do so. Second, from an implementation standpoint, I am 99% sure there is a right-hand rule sign flip for $M_{sc,x}$ , which is why there is a subtraction for that first formula. 
+
+If you are doing punching shear calculations by hand, it is recommended that you draw the free-body diagrams to avoid sign-errors. Also, drawing FBD allows you to consider other sources of loading such as cladding along slab edges (which can be quite heavy).
 
 
 
@@ -581,7 +603,33 @@ wthisj considers nearby openings by converting all geometry to polar coordinate.
 
 
 
-### 4.0 Background Info on J
+
+
+
+
+**Nuance #6: Corner Column Principal Orientation?**
+
+
+
+
+
+
+
+
+
+
+
+**Nuance #7: How To Calculate J for Section With Slanted Surfaces?**
+
+
+
+
+
+
+
+
+
+### 4.0 Slightly Different Version of J
 
 
 
@@ -595,13 +643,13 @@ wthisj considers nearby openings by converting all geometry to polar coordinate.
 
 ### 6.0 Numerical Approximation with wthisj
 
-
+wthisj considers nearby openings by converting all geometry to polar coordinates. Each opening added by the user is converted into a "$\theta$ deletion range". Fibers falling in between deletion ranges are removed. 
 
 
 ### 7.0 What About Allowable Shear Capacity?
 
 
-I've written in great length about how to determine the shear stress **demand**. But what about allowable shear **capacity**? Unfortunately, I will not be covering capacity in detail here. Concrete strength is mostly empirical and based on experimental testing. I don't think there's anything theoretically interesting. In general, the building code specifies an allowable shear stress ranging from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
+I've written in great length about how to determine the shear stress **demand**. But what about allowable shear **capacity**? Unfortunately, I will not be covering capacity in detail here. Concrete strength is mostly empirical and based on experimental testing. In general, the building code specifies an allowable shear stress ranging from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$
 
 Wthisj will not calculate punching shear capacity. Please refer to the building code for more guidance. 
 
