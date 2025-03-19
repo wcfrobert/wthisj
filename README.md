@@ -416,7 +416,7 @@ column1.rotate(angle=45)
 
 Two-way shear - known colloquially as punching shear - is a load transfer mechanism between concrete slabs and its supporting columns. This type of load transfer is unique to a special type of floor system called **flat plate** (or flat slab where drop panel or column caps are present). In a flat plate system, the slab is supported directly by columns; no beams, no girders, just a smooth monolithic plate.
 
-In the figure below, we see two types of concrete floor systems. The one on the left is more traditional, whereby the slab is supported by intersecting beams, which then transfer the load to the columns. The modern approach, shown on the right, has a completely flat soffit without any beams.
+In the figure below, we see two types of concrete floor systems. The one on the left is more traditional, whereby the slab is supported by intersecting beams, which then transfer the loads to the columns. The modern approach, shown on the right, has a completely flat soffit without any beams.
 
 <p align="center"><img src="./doc/theory1.png" width="70%"></p>
 
@@ -426,11 +426,11 @@ So what is the trade-off? The lack of supporting beams means **less redundancy**
 
 <p align="center"><img src="./doc/theory2.png" width="50%"></p>
 
-### 2.0 Punching Shear
+### 2.0 Punching Shear Calculation
 
-Let's start simple and introduce nuances later on. For now, the shear stress is simply equal to the shear load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as four rectangular faces offset d/2 from the column face (shown in dotted line below).
+Let's start simple and gradually introduce more nuances later. For now, the punching shear stress is simply equal to the load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as four rectangular faces offset d/2 from the column face (shown in dotted line below).
 
-<p align="center"><img src="./doc/theory3.png" width="40%"></p>
+<p align="center"><img src="./doc/theory3.png" width="80%"></p>
 
 Therefore, the total shear area is equal to the perimeter ($b_o$) times the slab depth ($d$). Slab depth is measured from the extreme compression edge to tension rebar centroid (taking the average depth of the two-orthogonal directions).
 
@@ -446,7 +446,7 @@ To account for the effect of moment transfer, ACI-318 provides an equation that 
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
 
-Please note that although there is a $\pm$ sign for the second term, unbalanced moment is not always symmetrical where both negative and positive magnitudes are possible. For example, an edge column will always have unbalanced moment directed on one-side.
+Please note that although there is a $\pm$ sign for the second term, it is not always the case that both positive and negative unbalanced moments are possible. For example, an edge column will always have unbalanced moment directed on one-side.
 
 <p align="center"><img src="./doc/theory7.png" width="100%"></p>
 
@@ -481,7 +481,7 @@ For example, a square column would have a moment transfer ratio of 60% through f
 
 **Distance From Perimeter Centroid ($c$)**
 
-The parameter c is the distance from the <u>centroid of the shear section</u> to any fiber in the parameter. We usually only care about the fiber furthest away where the shear stress will be highest. It is important to note that the shear section centroid does NOT always coincide with the column centroid! 
+The parameter c is the distance from the <u>centroid of the shear section</u> to any fiber in the parameter. We usually only care about the fiber furthest away where the shear stress will be highest. It is important to note that the shear section centroid does NOT always coincide with the column centroid.
 
 
 
@@ -514,17 +514,17 @@ Finally, putting all the pieces together, we arrive at the same equation as abov
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
-We now have all the pieces to calculate the punching shear stress. 
+
 
 
 
 ### 3.0 Nuances To Consider
 
-In practice, the formulations above are easily strained by real design scenarios. Let's consider some of the nuances that one may encounter.
+In practice, the formulation above is easily strained by non-typical design scenarios. Let's consider some of the nuances that one may encounter.
 
 **Nuance #1: Is $J$ Calculated Differently For The X and Y Axes?**
 
-Yes. Despite being called a "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least based on the way it is used. In mechanics of materials, polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion. There is only one possible $J$ for any cross section. On the other hand, the planar moments of inertia are properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$). The planar and polar moments of inertia are related like so:
+Yes. Despite being called a "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least based on the way it is used. In mechanics of materials, polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion. There is only one possible $J$ for any cross section. On the other hand, the planar moments of inertia are properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$). The planar and polar moments of inertia are related, and they may be used to calculate normal stress and shear stress, respectively.
 
 $$I_z = J = I_x + I_y$$
 
@@ -532,7 +532,7 @@ $$\mbox{shear stress due to torsion}: \tau =Tr/J$$
 
 $$\mbox{normal stress due to flexure}: \sigma = My/I_x \mbox{ and } \sigma=Mx/I_y$$
 
-The use of $J$ to represent non-polar moment of inertia in concrete design is an anti-pattern. Indeed, it is possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
+The use of $J$ to represent planar moment of inertia in concrete design is a confusing anti-pattern. Indeed, it is possible to calculate an $J_c$ for both orthogonal axes. Here's $J_{cx}$ and $J_{cy}$ for an interior condition.
 
 $$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
@@ -550,22 +550,24 @@ $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{
 
 
 
-**Nuance #3: How Does Nearby Openings Impact Punching Shear?**
 
-According to ACI 318-19 22.6.4.3, If an opening is closer than $4h$ to the critical shear perimeter, the shear perimeter ($b_o$) must be reduced and thus overall punching shear stress increases. To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration:
+
+**Nuance #3: How Does Nearby Openings Impact Shear Stress?**
+
+According to ACI 318-19 22.6.4.3, If an opening is closer than $4h$ to the critical shear perimeter, the shear perimeter ($b_o$) must be reduced which leads to an increase in punching shear stress. To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration:
 
 <p align="center"><img src="./doc/theory11.png" width="70%"></p>
 
-In practice, most engineers use some kind of CAD software to avoid doing the geometry puzzle. There are two additional consequences that's not often talked about:
+In practice, most engineers use some kind of CAD software to avoid doing the geometry puzzle. In addition to the perimeter reduction, there are two additional consequences that's not often not talked about:
 
-* The addition of openings shifted the perimeter centroid (see nuance #5).
-* The addition of opening shifted the principal axes orientation. The section above must be rotated 28 degrees to its principal geometry - where $I_{xy}=0$ - otherwise equilibrium will not hold. (see nuance #6).
+* The addition of openings may shift the perimeter centroid.
+* The addition of opening may rotate the principal axes. For example, the section above on the right must be rotated 28 degrees to its principal orientation - where $I_{xy}=0$ - otherwise equilibrium will not hold. We will elaborate further in Nuance #6.
 
 
 
 **Nuance #4: Edge or Corner Conditions With Large Overhang**
 
-At edge or corner columns, the slab may cantilever out beyond the face of the column. According to ACI 318-19 22.6.4.1, the perimeter of the critical section shall be a minimum. We will interpret this to mean that the overhang cannot provide more perimeter than if the column were on the interior. If we do the math, the limit works out to be $c_2/2 +d$. Where $d$ is the average slab depth, and $c_2$ is the column dimension parallel to the slab edge. 
+At edge or corner columns, the slab may cantilever far beyond the face of the column. At what point can you consider it an interior condition? According to ACI 318-19 22.6.4.1, the perimeter of the critical section shall be minimized. We will interpret this to mean that the overhang cannot provide more perimeter than if the column were on the interior. If we do the math, the limit works out to be $c_2/2 +d$. Where $d$ is the average slab depth, and $c_2$ is the column dimension parallel to the slab edge. If the slab cantilevers longer than this limit, the edge condition becomes an interior condition.
 
 $$\mbox{max overhang} = c_2/2 + d$$
 
@@ -573,19 +575,19 @@ $$\mbox{max overhang} = c_2/2 + d$$
 
 
 
-**Nuance #5: What Happens When Critical Perimeter Centroid Does Not Coincide With Column Centroid?**
+**Nuance #5: What Happens When Perimeter Centroid Does Not Coincide With Column Centroid?**
 
-For edge and corner conditions, the shear perimeter centroid will always be offset from the column centroid. Even for interior conditions, sometimes the centroids will not coincide as we have seen in Nuance #3. The centroid offset is illustrated below.
+For an interior condition, the centroid of the critical shear section most likely coincides with the column centroid. However, for edge and corner conditions, this is not the case and there will be an offset which is illustrated in the figure below.
 
 <p align="center"><img src="./doc/theory8.png" width="60%"></p>
 
 There are two important ramifications:
 
-* Firstly, the neutral axis is located at the shear perimeter centroid, NOT the column centroid. Therefore, the $c$ variable in $\gamma_v Mc/J$ must be with respect to the perimeter centroid. We can calculate the perimeter centroid using the first moment of area formulas:
+* First, the neutral axis is located at the shear perimeter centroid, NOT the column centroid. Therefore, the $c$ variable in $\gamma_v Mc/J$ must be relative to the perimeter centroid. We can calculate the perimeter centroid using the first moment of area formulas:
 
 $$x_c = \frac{\sum xA}{\sum A} \mbox{ and } y_c = \frac{\sum yA}{\sum A}$$
 
-* Secondly, since shear demand is usually derived from FEM software that reports $M_u$ and $V_u$ at the column centroid, there must be an moment adjustment.
+* Second, since shear demand is usually derived from FEM software that reports $M_u$ and $V_u$ at the column centroid, there must be an moment adjustment.
 
 $$M_{sc,x} = M_{sc,xO} - V_u (e_y)$$
 
@@ -593,21 +595,35 @@ $$M_{sc,y} = M_{sc,yO} + V_u (e_x)$$
 
 <p align="center"><img src="./doc/theory9.png" width="60%"></p>
 
-This moment adjustment is kind of tricky. Firstly, the $Pe$ moment adjustment is almost always subtractive from the applied moment (i.e. acts in the opposite direction). In other words, it is usually more conservative to ignore it. But depending on the shear demand $V_u$, it may be overly conservative to do so. Second, from an implementation standpoint, I am 99% sure there is a right-hand rule sign flip for $M_{sc,x}$ , which is why there is a subtraction for that first formula. 
+This moment adjustment is somewhat tricky. Firstly, the $Pe$ moment adjustment is almost always subtracted from the applied moment (i.e. acts in the opposite direction). In other words, it is usually more conservative to ignore it. But depending on the shear demand $V_u$, it may be overly conservative to do so. Secondly, from an implementation standpoint, I am 99% sure there is a right-hand rule sign flip for $M_{sc,x}$ , which is why there is a subtraction for that first formula. 
 
-If you are doing punching shear calculations by hand, it is recommended that you draw the free-body diagrams to avoid sign-errors. Also, drawing FBD allows you to consider other sources of loading such as cladding along slab edges (which can be quite heavy).
+If you are doing punching shear calculations by hand, I highly recommend drawing the free-body diagrams (FBD) to avoid sign errors. Furthermore, you can consider additional load sources such as cladding on the slab edge (which can get quite heavy). 
 
+<p align="center"><img src="./doc/theory13.png" width="50%"></p>
 
-
-
-
-
+Wthisj expects the final applied forces $(V_u, M_{ux}, M_{uy})$ to be provided by the user. Whatever load patterns you may have, please perform the necessary calculations to get the forces at the shear perimeter centroid.
 
 
 
 
 
-**Nuance #6: Corner Column Principal Orientation?**
+**Nuance #6: What If The Principal Axes Are Slanted? Such As At Corner Columns.**
+
+In mechanics of materials, we learned that in order for the flexural formulas to be applicable, the sections MUST be in its principal orientation. An alternative perspective is to say that the applied moment vector **M**, must be resolved into components of the principal axes. The former perspective is easier to implement with code, whereas the latter is easier for hand calculations.
+
+$$\sigma =M_xc_y/I_x +M_y c_x / I_y \Rightarrow \mbox{ this formula is only applicable if } I_{xy}=0$$
+
+For most symmetrical geometries, the principal axes is simply the horizontal (X) and vertical (Y) axes. However, there may be sections that have slanted principal axes. This is sometimes referred to as **unsymmetric bending**. In short, the flexure formulas - and thus the punching shear stress formula as well - can only guarantee equilibrium when applied with respect to the principal axes. 
+
+For example, in the figure below, I have a 24"x24" corner column with 12" of overhang beyond the column face. I applied -10 kips shear force and a Y-moment of 430 kip.in.
+
+<p align="center"><img src="./doc/theory14.png" width="90%"></p>
+
+
+
+
+
+
 
 
 
@@ -621,7 +637,7 @@ If you are doing punching shear calculations by hand, it is recommended that you
 
 **Nuance #7: How To Calculate J for Section With Slanted Surfaces?**
 
-
+The elephant in the room.
 
 
 

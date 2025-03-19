@@ -4,7 +4,7 @@ import wthisj
 column1 = wthisj.PunchingShearSection(width = 24,
                                       height = 24,
                                       slab_depth = 12,
-                                      condition = "W",
+                                      condition = "NW",
                                       overhang_x = 12,
                                       overhang_y = 12,
                                       L_studrail = 0)
@@ -17,11 +17,11 @@ column1 = wthisj.PunchingShearSection(width = 24,
 # column1.preview()
 
 # calculate punching shear stress
-results = column1.solve(P = 0,
+results = column1.solve(P = -10,
                         Mx = 0,
-                        My = -231,
-                        consider_Pe=True,
-                        auto_rotate=True, 
+                        My = 430,
+                        consider_Pe=False,
+                        auto_rotate=False, 
                         verbose=True)
 
 # # plot results
