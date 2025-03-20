@@ -522,7 +522,20 @@ $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
 In practice, the formulation above is easily strained by non-typical design scenarios. Let's consider some of the nuances that one may encounter.
 
-**Nuance #1: Is $J$ Calculated Differently For The X and Y Axes?**
+**Nuance #1: What Happens When There Is Unbalanced Moment About Both Axes?**
+
+There's been [plenty of discussion](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time. Calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I don't think there is consensus yet. I'll leave the engineering judgement to the reader. 
+
+Here's the full shear stress equation if we were to consider unbalanced moment about both axes. Notice that we now need to calculate two $J$ terms.
+
+$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
+
+> [!NOTE]
+> wthisj will calculate shear stress using the above formula. If you would like to consider unbalanced moment one axis at a time, make sure to set one of the moment arguments (`Mx, My`) to zero in `PunchingShearSection.solve()`
+
+
+
+**Nuance #2: Is J Calculated Differently For The X and Y Axes?**
 
 Yes. Despite being called a "polar moment of inertia", the $J_c$ term is just a regular moment of inertia, at least based on the way it is used. In mechanics of materials, polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion. There is only one possible $J$ for any cross section. On the other hand, the planar moments of inertia are properties associated with out-of-plane flexure and can occur about two orthogonal axes ($I_x$ and $I_y$). The planar and polar moments of inertia are related, and they may be used to calculate normal stress and shear stress, respectively.
 
@@ -540,14 +553,8 @@ $$J_{cy} = 2(\frac{d b_2^3}{12}+\frac{b_2 d^3}{12}) + 2(b_1 d) (b_2/2)^2$$
 
 
 
-**Nuance #2: Should We consider Unbalanced Moment About Both Axes?**
-
-The natural follow up question is whether we need to use $J_{cx}$ and $J_{cy}$ at the same time for bi-axial moment. There's [plenty of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time. Calculating stress due to bi-axial moment will yield a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I do not think there is consensus yet. I'll leave the engineering judgement to the reader. 
-
-Here's the full shear stress equation if we were to consider unbalanced moment about both axes.
-
-$$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
-
+> [!NOTE]
+> wthisj uses numerical approximation to calculate J. In the backend, the perimeter is discretized into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. Refer to Section 5.0 and 6.0 for more info. The user may opt to reduce the fiber size even further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
 
 
 
@@ -563,9 +570,14 @@ In practice, most engineers use some kind of CAD software to avoid doing the geo
 * The addition of openings may shift the perimeter centroid.
 * The addition of opening may rotate the principal axes. For example, the section above on the right must be rotated 28 degrees to its principal orientation - where $I_{xy}=0$ - otherwise equilibrium will not hold. We will elaborate further in Nuance #6.
 
+> [!NOTE]
+> wthisj allows an arbitrary number of rectangular openings to be added with the `PunchingShearSection.add_opening(dx, dy, width, height)` method. A warning will be printed to console if the openings is further than 4h away because the specified opening can technically be ignored. In the back end, each opening is converted into a $\theta$ deletion range. Then using polar coordinate system, all perimeter fibers falling within the $\theta$ deletion range is removed from the model.
 
 
-**Nuance #4: Edge or Corner Conditions With Large Overhang**
+
+
+
+**Nuance #4: What Happens When There Is Large Overhang At Edge or Corner Columns?**
 
 At edge or corner columns, the slab may cantilever far beyond the face of the column. At what point can you consider it an interior condition? According to ACI 318-19 22.6.4.1, the perimeter of the critical section shall be minimized. We will interpret this to mean that the overhang cannot provide more perimeter than if the column were on the interior. If we do the math, the limit works out to be $c_2/2 +d$. Where $d$ is the average slab depth, and $c_2$ is the column dimension parallel to the slab edge. If the slab cantilevers longer than this limit, the edge condition becomes an interior condition.
 
@@ -573,15 +585,18 @@ $$\mbox{max overhang} = c_2/2 + d$$
 
 <p align="center"><img src="./doc/theory12.png" width="70%"></p>
 
+> [!NOTE]
+> wthisj implements the above logic automatically. When a edge or corner `PunchingShearSection()` is initialized with a large enough `overhang_x` or `overhang_y`, the edge or corner condition is automatically converted to interior condition.
+
 
 
 **Nuance #5: What Happens When Perimeter Centroid Does Not Coincide With Column Centroid?**
 
-For an interior condition, the centroid of the critical shear section most likely coincides with the column centroid. However, for edge and corner conditions, this is not the case and there will be an offset which is illustrated in the figure below.
+For an interior condition, the centroid of the critical shear section most likely coincides with the column centroid. However, at edge and corner columns, there will be an offset which is illustrated in the figure below.
 
 <p align="center"><img src="./doc/theory8.png" width="60%"></p>
 
-There are two important ramifications:
+Two important ramifications from this offset:
 
 * First, the neutral axis is located at the shear perimeter centroid, NOT the column centroid. Therefore, the $c$ variable in $\gamma_v Mc/J$ must be relative to the perimeter centroid. We can calculate the perimeter centroid using the first moment of area formulas:
 
@@ -593,51 +608,75 @@ $$M_{sc,x} = M_{sc,xO} - V_u (e_y)$$
 
 $$M_{sc,y} = M_{sc,yO} + V_u (e_x)$$
 
-<p align="center"><img src="./doc/theory9.png" width="60%"></p>
+<p align="center"><img src="./doc/theory9.png" width="80%"></p>
 
-This moment adjustment is somewhat tricky. Firstly, the $Pe$ moment adjustment is almost always subtracted from the applied moment (i.e. acts in the opposite direction). In other words, it is usually more conservative to ignore it. But depending on the shear demand $V_u$, it may be overly conservative to do so. Secondly, from an implementation standpoint, I am 99% sure there is a right-hand rule sign flip for $M_{sc,x}$ , which is why there is a subtraction for that first formula. 
+This moment adjustment is kind of tricky. Firstly, the $Pe$ moment adjustment is almost always subtracted from the applied moment (try checking equilibrium yourself if you are not convinced). In other words, this $Pe$ moment most likely acts in the opposite direction. Secondly, I am not sure if this adjustment always make sense because I've seen situations where the $Pe$ moment is actually larger than the unbalanced moment. Lastly, for those trying to implement this programmatically, be careful because I am 99% sure there is a right-hand rule sign flip for $M_{sc,x}$. 
 
-If you are doing punching shear calculations by hand, I highly recommend drawing the free-body diagrams (FBD) to avoid sign errors. Furthermore, you can consider additional load sources such as cladding on the slab edge (which can get quite heavy). 
+If you are doing punching shear calculations by hand, I highly recommend drawing the free-body diagrams (FBD) to avoid sign errors. Furthermore, you can consider additional load sources such as cladding on the slab edge. Below is an example.
 
 <p align="center"><img src="./doc/theory13.png" width="50%"></p>
 
-Wthisj expects the final applied forces $(V_u, M_{ux}, M_{uy})$ to be provided by the user. Whatever load patterns you may have, please perform the necessary calculations to get the forces at the shear perimeter centroid.
+> [!NOTE]
+> Wthisj expects the final applied forces `V, Mx, My` to be provided by the user. Whatever load patterns you have, please perform the necessary calculations to get the forces with respect to the shear perimeter centroid. 
+>
+> To enable $Pe$ moment adjustment, simply set the `consider_pe` argument in `PunchingShearSection.solve()` to True (note this argument is optional and set to True by default).
 
 
 
 
 
-**Nuance #6: What If The Principal Axes Are Slanted? Such As At Corner Columns.**
+**Nuance #6: What Happens At Corner Columns Where Principal Axes Are Skewed?**
 
-In mechanics of materials, we learned that in order for the flexural formulas to be applicable, the sections MUST be in its principal orientation. An alternative perspective is to say that the applied moment vector **M**, must be resolved into components of the principal axes. The former perspective is easier to implement with code, whereas the latter is easier for hand calculations.
+In mechanics of materials, we learned that in order for the flexural formulas to be applicable, the sections MUST be in its principal orientation. An alternative perspective is to say that the applied moment vector **M**, must be resolved into components of the principal axes. 
 
 $$\sigma =M_xc_y/I_x +M_y c_x / I_y \Rightarrow \mbox{ this formula is only applicable if } I_{xy}=0$$
 
-For most symmetrical geometries, the principal axes is simply the horizontal (X) and vertical (Y) axes. However, there may be sections that have slanted principal axes. This is sometimes referred to as **unsymmetric bending**. In short, the flexure formulas - and thus the punching shear stress formula as well - can only guarantee equilibrium when applied with respect to the principal axes. 
+For most symmetrical geometries, the principal axes is simply the horizontal (X) and vertical (Y) axes. However, there are sections - such as an L shape - that have slanted principal axes. This is sometimes referred to as **unsymmetric bending**. In short, the flexure formulas - and thus the punching shear stress formula as well - can only guarantee equilibrium when applied with respect to the principal axes. 
 
-For example, in the figure below, I have a 24"x24" corner column with 12" of overhang beyond the column face. I applied -10 kips shear force and a Y-moment of 430 kip.in.
+In the figure below, I have a corner column subjected to the exact same loading condition. 
 
-<p align="center"><img src="./doc/theory14.png" width="90%"></p>
+<p align="center"><img src="./doc/theory14.png" width="100%"></p>
 
+On the left, we naively apply moment and the punching shear stress formula about the non-principal Y axes. Notice how the entire left face of the column has a constant stress. They have the same $c_x$ distance after all. Unfortunately, the resulting stress field is NOT in equilibrium.
 
+On the right, we first resolve the moment into components of the principal axes $(x_p, y_p)$, and then apply the punching shear stress formula about this rotated local axis. Notice how much higher the stress becomes at the bottom left corner!
 
-
-
-
-
-
-
-
-
+> [!NOTE]
+> To automatically rotate local axes to principal orientation, simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is optional and set to True by default).
+>
+> Note the entire geometry is rotated, rather than the moment vector, because it is easier to implement programmatically.
 
 
 
 
 
+**Nuance #7: What Happens When Stud Rails Are Added?**
 
-**Nuance #7: How To Calculate J for Section With Slanted Surfaces?**
+The addition of stud rails (shear reinforcements), dramatically expands the shear perimeter into a polygon. An illustration is provided below.
 
-The elephant in the room.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
