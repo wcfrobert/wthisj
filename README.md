@@ -571,7 +571,7 @@ In practice, most engineers use some kind of CAD software to avoid doing the geo
 * The addition of opening may rotate the principal axes. For example, the section above on the right must be rotated 28 degrees to its principal orientation - where $I_{xy}=0$ - otherwise equilibrium will not hold. We will elaborate further in Nuance #6.
 
 > [!NOTE]
-> wthisj allows an arbitrary number of rectangular openings to be added with the `PunchingShearSection.add_opening(dx, dy, width, height)` method. A warning will be printed to console if the openings is further than 4h away because the specified opening can technically be ignored. In the back end, each opening is converted into a $\theta$ deletion range. Then using polar coordinate system, all perimeter fibers falling within the $\theta$ deletion range is removed from the model.
+> wthisj allows an arbitrary number of rectangular openings to be added with the `PunchingShearSection.add_opening(dx, dy, width, height)` method. A warning will be printed to console if the openings is further than 4h away because the specified opening can technically be ignored. In the back end, each opening is converted into a $\theta$ deletion range. Then, using polar coordinate system, all perimeter fibers falling within the $\theta$ deletion range are removed from the model.
 
 
 
@@ -586,7 +586,7 @@ $$\mbox{max overhang} = c_2/2 + d$$
 <p align="center"><img src="./doc/theory12.png" width="70%"></p>
 
 > [!NOTE]
-> wthisj implements the above logic automatically. When a edge or corner `PunchingShearSection()` is initialized with a large enough `overhang_x` or `overhang_y`, the edge or corner condition is automatically converted to interior condition.
+> wthisj implements the above logic automatically. If an edge or corner `PunchingShearSection()` is initialized with a large enough `overhang_x` or `overhang_y`, it is automatically converted to an interior condition.
 
 
 
@@ -619,7 +619,7 @@ If you are doing punching shear calculations by hand, I highly recommend drawing
 > [!NOTE]
 > Wthisj expects the final applied forces `V, Mx, My` to be provided by the user. Whatever load patterns you have, please perform the necessary calculations to get the forces with respect to the shear perimeter centroid. 
 >
-> To enable $Pe$ moment adjustment, simply set the `consider_pe` argument in `PunchingShearSection.solve()` to True (note this argument is optional and set to True by default).
+> To enable $Pe$ moment adjustment, simply set the `consider_pe` argument in `PunchingShearSection.solve()` to True (note this argument is set to True by default).
 
 
 
@@ -642,9 +642,9 @@ On the left, we naively apply moment and the punching shear stress formula about
 On the right, we first resolve the moment into components of the principal axes $(x_p, y_p)$, and then apply the punching shear stress formula about this rotated local axis. Notice how much higher the stress becomes at the bottom left corner!
 
 > [!NOTE]
-> To automatically rotate local axes to principal orientation, simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is optional and set to True by default).
+> To automatically rotate local axes to principal orientation, simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is set to True by default).
 >
-> Note the entire geometry is rotated, rather than the moment vector, because it is easier to implement programmatically.
+> In the backend, the entire geometry is rotated, rather than the moment vector, because the former is easier to implement programmatically.
 
 
 
