@@ -4,14 +4,13 @@ import wthisj
 column1 = wthisj.PunchingShearSection(col_width = 24,
                                       col_depth = 24,
                                       slab_avg_depth = 12,
-                                      condition = "W",
+                                      condition = "NW",
                                       overhang_x = 12,
-                                      overhang_y = 0,
-                                      studrail_length = 36)
+                                      overhang_y = 12,
+                                      studrail_length = 0)
 
-# add openings
-column1.add_opening(xo=80, yo=-10, width=18, depth=20)
-
+# add as many openings as you want
+column1.add_opening(xo=40, yo=-10, width=18, depth=20)
 
 # preview geometry
 column1.preview()
@@ -21,7 +20,7 @@ results = column1.solve(Vz = -100,
                         Mx = 400,
                         My = 400,
                         consider_ecc=False,
-                        auto_rotate=False, 
+                        auto_rotate=True, 
                         verbose=True)
 
 # plot results (matplotlib)

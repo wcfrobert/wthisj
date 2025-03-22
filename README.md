@@ -23,57 +23,57 @@
 
 ## Introduction
 
-**wthisj** (what the heck is j?) is a python program that calculates punching shear stress around a column. It does so using the elastic method along with concepts described in <u>ACI 318</u> and <u>ACI 421.1R</u>. Refer to the [theoretical background](#theoretical-background) section for more info. Notable features include:
+**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations. It does so using the elastic method along with concepts described in <u>ACI 318</u> and <u>ACI 421.1R</u>. Refer to the [theoretical background](#theoretical-background) section for more info. Notable features include:
 
 * Supports all column conditions (**interior, edge, and corner**)
 * Ability to add **stud rails** (i.e. polygonal shear perimeters)
 * Ability to add **openings**
-* Interactive result visualization
-* Other advanced features like principal orientation rotation, and consideration of moment induced by eccentricity between column and centroid of critical shear perimeter
+* Interactive visualization of shear stresses
+* Advanced features like principal orientation rotation, and consideration of moment induced by eccentricity between column and centroid of critical shear perimeter
 
 ## Quick Start
 
-Here's the minimum viable script. Define a shear perimeter, run analysis, and visualize results in 3 lines of python code. 
+Here's the minimum viable script. 
 
 ``` python
 import wthisj
 
 # initialize a column perimeter
-column1 = wthisj.PunchingShearSection(width = 24, height = 24, slab_depth = 12, condition = "I")
+column1 = wthisj.PunchingShearSection(col_width = 24, col_depth = 24, slab_avg_depth = 12, condition = "I")
 
 # calculate punching shear stress
-results = column1.solve(P = -100, Mx = 400, My = 0)
+results = column1.solve(Vz = -100, Mx = 400, My = 0)
 
-# plot results (plotly)
-column1.plot_results_3D()
+# plot results
+column1.plot_results()
 ```
 
-Here is a more comprehensive quick start script found in `main.py`:
+Here's a more comprehensive quick start script found in `main.py`:
 
 ```python
 import wthisj
 
-# initialize a column perimeter. 
-column1 = wthisj.PunchingShearSection(width = 24,
-                                      height = 24,
-                                      slab_depth = 12,
-                                      condition = "W",
+# initialize a column perimeter
+column1 = wthisj.PunchingShearSection(col_width = 24,
+                                      col_depth = 24,
+                                      slab_avg_depth = 12,
+                                      condition = "NW",
                                       overhang_x = 12,
-                                      overhang_y = 0,
-                                      L_studrail = 36)
+                                      overhang_y = 12,
+                                      studrail_length = 0)
 
-# add openings
-column1.add_opening(dx=80, dy=-10, width=18, height=20)
+# add as many openings as you want
+column1.add_opening(xo=40, yo=-10, width=18, depth=20)
 
 # preview geometry
 column1.preview()
 
 # calculate punching shear stress
-results = column1.solve(P = -100,
+results = column1.solve(Vz = -100,
                         Mx = 400,
                         My = 400,
-                        consider_Pe=False,
-                        auto_rotate=False, 
+                        consider_ecc=False,
+                        auto_rotate=True, 
                         verbose=True)
 
 # plot results (matplotlib)
@@ -81,11 +81,13 @@ column1.plot_results()
 
 # plot results (plotly)
 column1.plot_results_3D()
+
+
 ```
 
-* There are 9 possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE). For example, NW is a corner condition with slab edge to the top and left.
+* There are 9 possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE) one might see on a compass. For example, "NW" is a corner column with slab edge to the top and left.
 * Units should be in **(KIPS, IN)**. 
-* Sign convention for the applied force follows the right-hand rule and is illustrated below. Note **P should be negative** unless you are checking uplift. 
+* Sign convention for the applied forces should follow the right-hand rule. Note **V should be negative** unless you are checking uplift. 
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/signconvention.png?raw=true" alt="fig" style="width: 70%;" />
@@ -100,11 +102,21 @@ Running the main quick start script will produce the following:
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/preview.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
 
-* `PunchingShearSection.solve()` runs an analysis and returns a result dataframe. The critical shear section is discretized numerically into many fibers, each row in the dataframe represents one fiber.
+* `PunchingShearSection.solve()` runs an analysis and returns a result dataframe. The critical shear section is discretized numerically into many fibers, each row in the data frame represents one fiber. Key calculation results will be printed to console if `verbose` is set to True.
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
+
+
+<div align="center">
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve_status.png?raw=true" alt="fig" style="width: 70%;" />
+</div>
+
+
+
+
+
 
 * `PunchingShearSection.plot_results()` generates a shear stress contour plot + a concise calculation summary.
 
@@ -115,8 +127,9 @@ Running the main quick start script will produce the following:
 * `PunchingShearSection.plot_results_3D()` generates a interactive 3D visualization in html format - viewable in most web browsers.
 
 <div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/demo.gif?raw=true" alt="fig" style="width: 70%;" />
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/results_3D.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
+
 
 
 
@@ -183,12 +196,12 @@ pip install wthisj
 
 Here are all the public methods available to the user:
 
-- `PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
+- `PunchingShearSection(col_width, col_height, slab_avg_depth, condition, overhang_x=0, overhang_y=0, studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
 - `PunchingShearSection.add_perimeter(start, end, depth)`
-- `PunchingShearSection.add_opening(dx, dy, width, height)`
+- `PunchingShearSection.add_opening(xo, yo, width, depth)`
 - `PunchingShearSection.rotate(angle)`
 
-- `PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`
+- `PunchingShearSection.solve(Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_ecc=False, auto_rotate=True, verbose=True)`
 
 - `PunchingShearSection.preview()`
 - `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
@@ -303,7 +316,7 @@ column1.add_opening(xo=80, yo=-10, width=18, depth=20)
 ```python
 # Check punching shear stress for a perimeter subjected to 100 kips of shear, 400 kips.in of moment in both directions.
 # Not rotating the section to principal orientation.
-# Not cons additional moment due to eccentricity between column and perimeter centroid.
+# Not considering additional moment due to eccentricity between column and perimeter centroid.
 results = column1.solve(Vz = -100,
                         Mx = 400,
                         My = 400,

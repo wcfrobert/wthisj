@@ -928,7 +928,7 @@ class PunchingShearSection:
         axs[0].annotate(r"$\theta_{{p}} = {:.1f} \quad deg$".format(self.theta_p), 
                         (xo,yo-dy*15), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         if abs(self.theta_p) > 0.1:
-            axs[0].annotate("WARNING: Section is not in principal orientation.", 
+            axs[0].annotate("WARNING: Non-principal orientation detected.", 
                             (xo-0.03,yo-dy*16), color="darkred", xycoords='axes fraction', fontsize=12, va="top", ha="left", wrap=True)
 
         # styling
@@ -1184,7 +1184,6 @@ class PunchingShearSection:
             if abs(required_rotation) > 0.1:
                 if auto_rotate:
                     print("\t\t Rotating section and applied moment by {:.1f} deg".format(required_rotation))
-                    print("\t\t\t Done!")
                 else:
                     print("\t\t WARNING: Auto rotation is disabled. Shear section is NOT in its principal orientation")
                     print("\t\t WARNING: Equilibrium check will fail unless section is rotated by {:.1f} deg.".format(required_rotation))
