@@ -280,10 +280,10 @@ column1.add_opening(xo=80, yo=-10, width=18, depth=20)
 
 ### Run Analysis
 
-**`PunchingShearSection.solve(P, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_Pe=True, auto_rotate=True, verbose=True)`** - Start analysis routine. Returns a dataframe where each row is a fiber within the shear perimeter, and the columns are the intermediate calculation results. 
+**`PunchingShearSection.solve(Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_ecc=False, auto_rotate=True, verbose=True)`** - Start analysis routine. Returns a dataframe where each row is a fiber within the shear perimeter, and the columns are the intermediate calculation results. 
 
-* P: float
-  * Applied shear force in KIPS. Should be NEGATIVE unless you are checking uplift
+* Vz: float
+  * Applied shear force in KIPS. Should always be NEGATIVE unless you are checking uplift
 * Mx: float
   * Applied moment about the X-axis in KIP.IN.
 * My: float
@@ -292,7 +292,7 @@ column1.add_opening(xo=80, yo=-10, width=18, depth=20)
   * Percentage of X moment transferred to the column via shear. wthisj will automatically calculate this. Or the user may enter a specific value of gamma_vx (e.g. 0.4)
 * gamma_vy: float or string (OPTIONAL)
   * Percentage of Y moment transferred to the column via shear. wthisj will automatically calculate this. Or the user may enter a specific value of gamma_vy (e.g. 0.4)
-* consider_Pe: bool (OPTIONAL)
+* consider_ecc: bool (OPTIONAL)
   * Whether or not to consider additional moment due to eccentricity between the column centroid and perimeter centroid. Defaults to True. Refer to the theory section for more info!
 * auto_rotate: bool (OPTIONAL)
   * Whether or not to auto-rotate geometry if it is not in principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info.
@@ -302,12 +302,12 @@ column1.add_opening(xo=80, yo=-10, width=18, depth=20)
 
 ```python
 # Check punching shear stress for a perimeter subjected to 100 kips of shear, 400 kips.in of moment in both directions.
-# Do not rotate the section to principal orientation.
-# Do not consider additional moment due to eccentricity between column and perimeter centroid.
-results = column1.solve(P = -100,
+# Not rotating the section to principal orientation.
+# Not cons additional moment due to eccentricity between column and perimeter centroid.
+results = column1.solve(Vz = -100,
                         Mx = 400,
                         My = 400,
-                        consider_Pe=False,
+                        consider_ecc=False,
                         auto_rotate=False, 
                         verbose=True)
 ```

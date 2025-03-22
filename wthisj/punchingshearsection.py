@@ -940,14 +940,14 @@ class PunchingShearSection:
         plt.tight_layout()
     
 
-    def solve(self, P, Mx, My, gamma_vx="auto", gamma_vy="auto", 
-              consider_Pe=True, auto_rotate=True, verbose=True):
+    def solve(self, Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", 
+              consider_ecc=False, auto_rotate=True, verbose=True):
         """
         Calculate shear stress at every point along the column perimeter. (ALL UNIT IN KIP, IN)
         
         Args:
-            P (float): 
-                Applied shear force in KIPS. Should be negative unless you are checking uplift
+            Vz (float): 
+                Applied shear force in KIPS. Should be negative unless you are checking uplift!
                 
             Mx (float): 
                 Applied moment about the X-axis in KIP.IN.
@@ -965,7 +965,7 @@ class PunchingShearSection:
                 wthisj automatically calculates this. Alternatively, the user may 
                 enter a specific value of gamma_v (e.g. 0.4)
                 
-            (OPTIONAL) consider_Pe = True (bool): 
+            (OPTIONAL) consider_ecc = False (bool): 
                 Boolean to consider additional moment due to eccentricity between 
                 the column centroid and perimeter centroid. Defaults to True.
             
@@ -986,20 +986,20 @@ class PunchingShearSection:
                 1. Rotate moment vector to principal orientation if necessary (i.e. theta_p != 0)
                         (Mx', My')
                 2. Additional moment due to eccentricity between column centroid and perimeter centroid
-                        (Mx'+Pey , My'+Pex)
+                        (Mx'+V*ey , My'+V*ex)
                 3. Only a fixed % of moment is transferred through shear (gamma_v)
-                        (gamma_v*(Mx'+Pey) , gamma_v*(My'+Pex))
+                        (gamma_v*(Mx'+V*ey) , gamma_v*(My'+V*ex))
             
         (1) Auto rotation to principal orientation:
             The elastic method takes advantage of principle of superposition. In practice, this means
-            we can calculate stress due to P/A, then M/S in both directions, then add (superimpose) them
+            we can calculate stress due to V/A, then M/S in both directions, then add (superimpose) them
             at the end. However, superposition is NOT valid for asymmetric sections not in its principal
             orientation. This is described in detail in any mechanics of material textbooks. We know a
             section is in its principal orientation if the product of inertia (Ixy) is equal to zero.
             
         
         (2) Additional moment due to Pe:
-            Most engineers obtain the applied shear (P) and unbalanced moment (Mx, My) using FEM software that
+            Most engineers obtain the applied shear (V) and unbalanced moment (Mx, My) using FEM software that
             reports column reactions. The problem is the column centroid does NOT coincide with the perimeter
             centroid in edge/corner conditions. I am not convinced anyone actually does this adjustment in practice,
             but it is described in detail in ACI 421.1R-20 and I think it makes sense.
@@ -1058,7 +1058,7 @@ class PunchingShearSection:
             raise RuntimeError("WARNING: Custom perimeter detected. Cannot calculate gamma_v automatically. Please provide it")
         
         # warning if P is positive
-        if P > 0:
+        if Vz > 0:
             print("WARNING: P is positive indicating uplift.")
         
         # calculate gamma_v
@@ -1115,9 +1115,9 @@ class PunchingShearSection:
         self.gamma_vy = g_vy if gamma_vy=="auto" else gamma_vy
         
         # calculate Pe moment if applicable
-        if consider_Pe:
-            Pex = P * self.x_centroid
-            Pey = - P * self.y_centroid # i think there is a right-hand rule flip here
+        if consider_ecc:
+            Pex = Vz * self.x_centroid
+            Pey = - Vz * self.y_centroid # i think there is a right-hand rule flip here
         else:
             Pex = 0
             Pey = 0
@@ -1125,7 +1125,7 @@ class PunchingShearSection:
         # calculate and store final applied forces
         self.Mx_final = self.gamma_vx*(Mx + Pey)
         self.My_final = self.gamma_vy*(My + Pex)
-        self.P = P
+        self.P = Vz
         self.Mx = Mx
         self.My = My
         self.Pex = Pex
@@ -1179,7 +1179,7 @@ class PunchingShearSection:
         
         # print out calculations step-by-step
         if verbose:
-            print("1. Rotate to principal orientation...")
+            print("1. Rotating to principal orientation...")
             if abs(required_rotation) > 0.1:
                 if auto_rotate:
                     print("\t\t Rotating section and applied moment by {:.1f} deg".format(required_rotation))
@@ -1202,11 +1202,21 @@ class PunchingShearSection:
                 print("\t\t\t Mx = {:.1f} k.in".format(Mx))
                 print("\t\t\t My = {:.1f} k.in".format(My))
             print("\t\t Adjusting for eccentricity between column and perimeter centroid:")
-            print("\t\t\t Mx + Pey = {:.1f} + {:.1f} = {:.1f} k.in".format(Mx, Pey, Mx + Pey))
-            print("\t\t\t My + Pex = {:.1f} + {:.1f} = {:.1f} k.in".format(My, Pex, My + Pex))
+            if consider_ecc:
+                print("\t\t\t Mx + V*ey = {:.1f} + {:.1f} = {:.1f} k.in".format(Mx, Pey, Mx + Pey))
+                print("\t\t\t My + V*ex = {:.1f} + {:.1f} = {:.1f} k.in".format(My, Pex, My + Pex))
+            else:
+                print("\t\t\t Centroid eccentricity adjustment is turned off.")
+                
+            print("\t\t Calculating gamma_v factor:")
+            if self.L_studrail != 0:
+                print("\t\t\t studrails detected. Using equations provided in ACI 421.1R-20")
+            print("\t\t\t gamma_vx = {:.2f}".format(self.gamma_vx))
+            print("\t\t\t gamma_vy = {:.2f}".format(self.gamma_vy))
+            
             print("\t\t Applying gamma_v factor:")
-            print("\t\t\t gamma_vx * (Mx + Pey) = {:.1f} * {:.1f} = {:.1f} k.in".format(self.gamma_vx, Mx+Pey, self.Mx_final))
-            print("\t\t\t gamma_vy * (My + Pex) = {:.1f} * {:.1f} = {:.1f} k.in".format(self.gamma_vy, My+Pex, self.My_final))
+            print("\t\t\t gamma_vx * (Mx + Pey) = {:.2f} * {:.1f} = {:.1f} k.in".format(self.gamma_vx, Mx+Pey, self.Mx_final))
+            print("\t\t\t gamma_vy * (My + Pex) = {:.2f} * {:.1f} = {:.1f} k.in".format(self.gamma_vy, My+Pex, self.My_final))
             
             print("3. Calculating shear stress...")
             print("\t\t Maximum shear stress = {:.1f} psi".format(self.v_max*1000))
