@@ -18,13 +18,13 @@ class PunchingShearSection:
     shear perimeter around a column in a concrete flat slab floor system.
     
     Args:
-        width (float):
-            Column support dimension along x
+        col_width (float):
+            Column dimension along x
             
-        height (float):
-            Column support dimension along y
+        col_depth (float):
+            Column dimension along y
             
-        slab_depth (float):
+        slab_avg_depth (float):
             Slab depth from outermost compression fiber to outer-most tension rebar. 
             Use the average depth of the two orthogonal slab directions.
             
@@ -41,7 +41,7 @@ class PunchingShearSection:
         (OPTIONAL) overhang_y = 0 (float):
             Slab overhang dimension along y beyond column face. Default = 0.
             
-        (OPTIONAL) L_studrail = 0 (float):
+        (OPTIONAL) studrail_length = 0 (float):
             Stud rail length if applicable. default = 0.
             
         (OPTIONAL) auto_generate_perimeter = True (bool):
@@ -60,17 +60,17 @@ class PunchingShearSection:
         PunchingShearSection.plot_results()
         PunchingShearSection.plot_results_3D()
     """
-    def __init__(self, width, height, slab_depth, condition, 
-                 overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True,
+    def __init__(self, col_width, col_depth, slab_avg_depth, condition, 
+                 overhang_x=0, overhang_y=0, studrail_length=0, auto_generate_perimeter=True,
                  PATCH_SIZE=0.5):
         # input arguments. See descriptions in docstring above.
-        self.width = width
-        self.height = height
-        self.slab_depth = slab_depth
+        self.width = col_width
+        self.height = col_depth
+        self.slab_depth = slab_avg_depth
         self.condition = condition
         self.overhang_x = overhang_x
         self.overhang_y = overhang_y
-        self.L_studrail = L_studrail
+        self.L_studrail = studrail_length
         self.generate_perimeter = auto_generate_perimeter
         self.PATCH_SIZE = PATCH_SIZE
         

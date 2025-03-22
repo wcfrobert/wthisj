@@ -203,15 +203,15 @@ If you need guidance at any time, use the help() command to access method docstr
 
 ### Define Shear Perimeter
 
-**`PunchingShearSection(width, height, slab_depth, condition, overhang_x=0, overhang_y=0, L_studrail=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate and return a PunchingShearSection object.
+**`PunchingShearSection(col_width, col_depth, slab_avg_depth, condition, overhang_x=0, overhang_y=0, studrail_length=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate and return a PunchingShearSection object.
 
-* width: float
+* col_width: float
   * Column dimension along x-axis
 
-* height: float
+* col_depth: float
   * Column dimension along y-axis
 
-* slab_depth: float
+* slab_avg_depth: float
   * Slab depth from outermost compression fiber to outermost tension rebar. Use the average depth of two orthogonal slab directions.
 
 * condition: string
@@ -229,7 +229,7 @@ If you need guidance at any time, use the help() command to access method docstr
   * Slab overhang dimension along the Y-axis beyond column face.
   * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition (where d is the slab depth, and b is the column dimension perpendicular to the edge).
 
-* L_studrail: float (OPTIONAL)
+* studrail_length: float (OPTIONAL)
   * Default = 0
   * Stud rails may be added to expand the punching shear perimeter into a polygonal pattern. The exact geometry is described in ACI 318-19. We will assume stud rails always exist at the column corners, and that a minimum of two rails exist on each face. Parameters like spacing and number of stud rails are irrelevant here because all we care about is the perimeter geometry (wthisj does NOT calculate any shear capacities!)
 
@@ -244,34 +244,34 @@ If you need guidance at any time, use the help() command to access method docstr
 ```python
 # define a top-left corner column (24"x24") supporting a slab with rebar depth of 12". 
 # Add 36" long stud rails on the inner faces. Slab overhang is 12" in both directions.
-column1 = wthisj.PunchingShearSection(width = 24,
-                                      height = 24,
-                                      slab_depth = 12,
+column1 = wthisj.PunchingShearSection(col_width = 24,
+                                      col_deptht = 24,
+                                      slab_avg_depth = 12,
                                       condition = "NW",
                                       overhang_x = 12,
                                       overhang_y = 12,
-                                      L_studrail = 36)
+                                      studrail_length = 36)
 ```
 
 
 
 ### Add Openings
 
-**`PunchingShearSection.add_opening(dx, dy, width, height)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
+**`PunchingShearSection.add_opening(xo, yo, width, depth)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
 
-* dx: float
+* xo: float
   * x-offset from column center (0,0) to the bottom left corner of opening
-* dy: float
+* yo: float
   * y-offset from column center (0,0) to the bottom left corner of opening
 * width: float
   * opening width
-* height: float
+* depth: float
   * opening height
 
 
 ```python
 # add a 18" x 20" opening with bottom-left corner located 80" left and 10" below the column center.
-column1.add_opening(dx=80, dy=-10, width=18, height=20)
+column1.add_opening(xo=80, yo=-10, width=18, depth=20)
 ```
 
 
