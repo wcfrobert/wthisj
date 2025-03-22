@@ -860,6 +860,7 @@ class PunchingShearSection:
         
         # plot Cog
         axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="darkblue",markersize=6, zorder=3, linestyle="none")
+        axs[1].plot(0, 0, marker="o", c="black", markersize=3, zorder=3, linestyle="none")
         
         # plot perimeter mesh with polygon patches
         DEFAULT_THICKNESS = 1  # for display
@@ -906,9 +907,9 @@ class PunchingShearSection:
         
         axs[0].annotate("Shear Perimeter and Area", 
                         (xo-0.03,yo-dy*6), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$L = {:.1f} \quad {}$".format(self.L, unit), 
+        axs[0].annotate(r"$b_o = {:.1f} \quad {}$".format(self.L, unit), 
                         (xo,yo-dy*7), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$A = {:.1f} \quad {}^2$".format(self.A, unit), 
+        axs[0].annotate(r"$b_od = {:.1f} \quad {}^2$".format(self.A, unit), 
                         (xo,yo-dy*8), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         
         axs[0].annotate("Section Modulus", 
@@ -1344,6 +1345,7 @@ class PunchingShearSection:
         
         # plot Cog
         axs[1].plot(self.x_centroid, self.y_centroid, marker="x", c="darkblue",markersize=6, zorder=3, linestyle="none")
+        axs[1].plot(0, 0, marker="o", c="black", markersize=3, zorder=3, linestyle="none")
         
         # freeze axis range, then plot slab edge
         axs[1].set_aspect('equal', 'datalim')
@@ -1369,7 +1371,7 @@ class PunchingShearSection:
 
         # annotation for perimeter properties
         xo = 0.12
-        yo = 0.97
+        yo = 0.99
         dy = 0.045
         unit = "in"
         axs[0].annotate("Geometric Properties", 
@@ -1378,9 +1380,9 @@ class PunchingShearSection:
                         (xo,yo-dy*1), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         axs[0].annotate(r"$y_{{cg}} = {:.1f} \quad {}$".format(self.y_centroid, unit), 
                         (xo,yo-dy*2), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$L = {:.1f} \quad {}$".format(self.L, unit), 
+        axs[0].annotate(r"$b_o = {:.1f} \quad {}$".format(self.L, unit), 
                         (xo,yo-dy*3), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$A = {:.1f} \quad {}^2$".format(self.A, unit), 
+        axs[0].annotate(r"$b_od = {:.1f} \quad {}^2$".format(self.A, unit), 
                         (xo,yo-dy*4), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         axs[0].annotate(r"$I_x = {:,.0f} \quad {}^4$".format(self.Ix, unit), 
                         (xo,yo-dy*5), xycoords='axes fraction', fontsize=12, va="top", ha="left")
@@ -1397,24 +1399,26 @@ class PunchingShearSection:
         
         axs[0].annotate("Applied Loading", 
                         (xo-0.03,yo-dy*11), fontweight="bold",xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$M_{{x}} = {:.1f} \quad k.in$".format(self.Mx), 
+        axs[0].annotate(r"$V_{{z}} = {:.1f} \quad k.in$".format(self.P), 
                         (xo,yo-dy*12), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$M_{{y}} = {:.1f} \quad k.in$".format(self.My), 
+        axs[0].annotate(r"$M_{{x}} = {:.1f} \quad k.in$".format(self.Mx), 
                         (xo,yo-dy*13), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$\gamma_{{vx}} = {:.2f}$".format(self.gamma_vx), 
+        axs[0].annotate(r"$M_{{y}} = {:.1f} \quad k.in$".format(self.My), 
                         (xo,yo-dy*14), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$\gamma_{{vy}} = {:.2f}$".format(self.gamma_vy), 
+        axs[0].annotate(r"$\gamma_{{vx}} = {:.2f}$".format(self.gamma_vx), 
                         (xo,yo-dy*15), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$Pe_{{x}} = {:.1f} \quad k.in$".format(self.Pex), 
+        axs[0].annotate(r"$\gamma_{{vy}} = {:.2f}$".format(self.gamma_vy), 
                         (xo,yo-dy*16), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$Pe_{{y}} = {:.1f} \quad k.in$".format(self.Pey), 
+        axs[0].annotate(r"$Ve_{{x}} = {:.1f} \quad k.in$".format(self.Pex), 
                         (xo,yo-dy*17), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$P_{{design}} = {:.1f} \quad kips$".format(self.P), 
+        axs[0].annotate(r"$Ve_{{y}} = {:.1f} \quad k.in$".format(self.Pey), 
                         (xo,yo-dy*18), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$M_{{x,design}} = {:.1f} \quad k.in$".format(self.Mx_final), 
+        axs[0].annotate(r"$V_u = {:.1f} \quad kips$".format(self.P), 
                         (xo,yo-dy*19), xycoords='axes fraction', fontsize=12, va="top", ha="left")
-        axs[0].annotate(r"$M_{{y,design}} = {:.1f} \quad k.in$".format(self.My_final), 
+        axs[0].annotate(r"$M_{{u,x}} = {:.1f} \quad k.in$".format(self.Mx_final), 
                         (xo,yo-dy*20), xycoords='axes fraction', fontsize=12, va="top", ha="left")
+        axs[0].annotate(r"$M_{{u,y}} = {:.1f} \quad k.in$".format(self.My_final), 
+                        (xo,yo-dy*21), xycoords='axes fraction', fontsize=12, va="top", ha="left")
         
         
         # warning message if not about principal orientation
@@ -1468,7 +1472,7 @@ class PunchingShearSection:
         table_properties = [r"$x_{{cg}}$",
                      r"$y_{{cg}}$",
                      r"$b_o$",
-                     r"$A$",
+                     r"$b_o d$",
                      r"$I_{x}$",
                      r"$I_{y}$",
                      r"$S_{{x,top}}$",
@@ -1502,16 +1506,18 @@ class PunchingShearSection:
         fig.add_trace(property_table, row=1, col=1)
         
         # applied force table
-        table_properties = [r"$M_x$",
+        table_properties = [r"$V_z$",
+                            r"$M_x$",
                             r"$M_y$",
                             r"$\gamma_{{vx}}$",
                             r"$\gamma_{{vy}}$",
-                            r"$Pe_x$",
-                            r"$Pe_y$",
-                            r"$P_{{design}}$",
-                            r"$M_{{x,design}}$",
-                            r"$M_{{y,design}}$"]
-        table_values = [r"${:.1f} \quad k.in$".format(self.Mx),
+                            r"$Ve_x$",
+                            r"$Ve_y$",
+                            r"$V_u$",
+                            r"$M_{{u,x}}$",
+                            r"$M_{{u,y}}$"]
+        table_values = [r"${:.1f} \quad k$".format(self.P),
+                        r"${:.1f} \quad k.in$".format(self.Mx),
                         r"${:.1f} \quad k.in$".format(self.My),
                         r"${:.2f}$".format(self.gamma_vx),
                         r"${:.2f}$".format(self.gamma_vy),
@@ -1712,7 +1718,18 @@ class PunchingShearSection:
         #################################################
         # STYLING AND ORIGIN MARKER
         #################################################
-        # plot orgin marker at centroid of perimeter
+        # plot column centroid
+        origin = go.Scatter3d(
+            x=[0],
+            y=[0],
+            z=[0],
+            mode='markers',
+            hoverinfo = 'skip',
+            showlegend=False,
+            marker=dict(color='black', size=5))
+        fig.add_trace(origin, row=1, col=2)
+        
+        # plot orgin marker at perimeter centroid
         xmax = max(self.perimeter["x_centroid"])
         xmin = min(self.perimeter["x_centroid"])
         ymax = max(self.perimeter["y_centroid"])
@@ -1763,6 +1780,7 @@ class PunchingShearSection:
                 size=14,
                 color="green"))
         fig.add_trace(Z, row=1, col=2)
+        
         # change such that axes are in proportion.
         fig.update_scenes(aspectmode="data")
         
