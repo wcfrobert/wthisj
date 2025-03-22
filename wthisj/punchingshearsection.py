@@ -207,11 +207,11 @@ class PunchingShearSection:
             self.slabedge_pts.append([b/2+L+SLAB_EXTENT_FACTOR*b, -h/2-L-SLAB_EXTENT_FACTOR*h*1.5])
             self.slabedge_pts.append([-b/2-L-SLAB_EXTENT_FACTOR*b, -h/2-L-SLAB_EXTENT_FACTOR*h*1.5])
             if self.has_studrail:
-                self.perimeter_pts.append([-b/2-L-d/2   ,   h/2+self.overhang_y])
-                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])
-                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2])
-                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2])
-                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])
+                self.perimeter_pts.append([-b/2-L-d/2  ,   h/2+self.overhang_y])
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2])
+                self.perimeter_pts.append([-b/2        ,   -h/2-L-d/2])
+                self.perimeter_pts.append([b/2         ,   -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2])
                 self.perimeter_pts.append([b/2+L+d/2   ,    h/2+self.overhang_y])
 
                 self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) # bot
@@ -243,11 +243,11 @@ class PunchingShearSection:
             self.slabedge_pts.append([-b/2-L-SLAB_EXTENT_FACTOR*b, h/2+L+SLAB_EXTENT_FACTOR*h*1.5])
             if self.has_studrail:
                 self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
-                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])
-                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2])
-                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2])
-                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])
-                self.perimeter_pts.append([-b/2-L-d/2   ,   -h/2-self.overhang_y])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2])
+                self.perimeter_pts.append([b/2         ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2        ,    h/2+L+d/2])
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2])
+                self.perimeter_pts.append([-b/2-L-d/2  ,   -h/2-self.overhang_y])
 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) # top
                 self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) # top
@@ -278,10 +278,10 @@ class PunchingShearSection:
             self.slabedge_pts.append([b/2+SLAB_EXTENT_FACTOR*b*1.5, -h/2-L-h*SLAB_EXTENT_FACTOR])
             if self.has_studrail:
                 self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-L-d/2])
-                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2])
-                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])
-                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])
-                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2])
+                self.perimeter_pts.append([b/2         ,   -h/2-L-d/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2])
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2])
+                self.perimeter_pts.append([b/2         ,    h/2+L+d/2])
                 self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+L+d/2])
 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) # top
@@ -313,10 +313,10 @@ class PunchingShearSection:
             self.slabedge_pts.append([-b/2-L-SLAB_EXTENT_FACTOR*b*1.5, -h/2-L-h*SLAB_EXTENT_FACTOR])
             if self.has_studrail:
                 self.perimeter_pts.append([b/2+self.overhang_x   ,    h/2+L+d/2])
-                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2]) #6
-                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])   #7
-                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
-                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([-b/2        ,    h/2+L+d/2]) #6
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2])       #7
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2])      #8
+                self.perimeter_pts.append([-b/2        ,   -h/2-L-d/2]) #1
                 self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-L-d/2])
 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
@@ -342,15 +342,15 @@ class PunchingShearSection:
         
         elif self.condition == "I":
             if self.has_studrail:
-                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
-                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2]) #2
-                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])   #3
-                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
-                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2]) #5
-                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2]) #6
-                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])   #7
-                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
-                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([-b/2        ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([b/2         ,   -h/2-L-d/2]) #2
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2])       #3
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2])       #4
+                self.perimeter_pts.append([b/2         ,    h/2+L+d/2]) #5
+                self.perimeter_pts.append([-b/2        ,    h/2+L+d/2]) #6
+                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2])       #7
+                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2])      #8
+                self.perimeter_pts.append([-b/2    ,   -h/2-L-d/2])     #1
                 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
                 self.studrail_pts.append([[b/2, h/2]    ,    [b/2, h/2+L]]) #top
@@ -377,8 +377,8 @@ class PunchingShearSection:
             self.slabedge_pts.append([-b/2-self.overhang_x, -h/2-L-SLAB_EXTENT_FACTOR*h])
             if self.has_studrail:
                 self.perimeter_pts.append([-b/2-self.overhang_x   ,    -h/2-L-d/2])
-                self.perimeter_pts.append([b/2+d/2     ,   -h/2-L-d/2]) #2
-                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2-d/2])   #3
+                self.perimeter_pts.append([b/2         ,   -h/2-L-d/2]) #2
+                self.perimeter_pts.append([b/2+L+d/2   ,   -h/2])       #3
                 self.perimeter_pts.append([b/2+L+d/2   ,    h/2+self.overhang_y])
 
                 self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) #bot
@@ -418,8 +418,8 @@ class PunchingShearSection:
             self.slabedge_pts.append([b/2+self.overhang_x, -h/2-L-SLAB_EXTENT_FACTOR*h])
             if self.has_studrail:
                 self.perimeter_pts.append([-b/2-L-d/2   ,    h/2+self.overhang_y])
-                self.perimeter_pts.append([-b/2-L-d/2  ,    -h/2-d/2])  #8
-                self.perimeter_pts.append([-b/2-d/2    ,   -h/2-L-d/2]) #1
+                self.perimeter_pts.append([-b/2-L-d/2   ,    -h/2])  #8
+                self.perimeter_pts.append([-b/2         ,   -h/2-L-d/2]) #1
                 self.perimeter_pts.append([b/2+self.overhang_x   ,    -h/2-L-d/2])
 
                 self.studrail_pts.append([[-b/2, -h/2]  ,    [-b/2, -h/2-L]]) #bot
@@ -459,8 +459,8 @@ class PunchingShearSection:
             self.slabedge_pts.append([-b/2-self.overhang_x, h/2+L+SLAB_EXTENT_FACTOR*h])
             if self.has_studrail:
                 self.perimeter_pts.append([b/2+L+d/2   ,    -h/2-self.overhang_y])
-                self.perimeter_pts.append([b/2+L+d/2   ,    h/2+d/2])   #4
-                self.perimeter_pts.append([b/2+d/2     ,    h/2+L+d/2]) #5
+                self.perimeter_pts.append([b/2+L+d/2   ,    h/2])       #4
+                self.perimeter_pts.append([b/2         ,    h/2+L+d/2]) #5
                 self.perimeter_pts.append([-b/2-self.overhang_x   ,    h/2+L+d/2])
 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
@@ -500,8 +500,8 @@ class PunchingShearSection:
             self.slabedge_pts.append([b/2+self.overhang_x, h/2+L+SLAB_EXTENT_FACTOR*h])
             if self.has_studrail:
                 self.perimeter_pts.append([b/2+self.overhang_x   ,    h/2+L+d/2])
-                self.perimeter_pts.append([-b/2-d/2    ,    h/2+L+d/2]) #6
-                self.perimeter_pts.append([-b/2-L-d/2  ,    h/2+d/2])   #7
+                self.perimeter_pts.append([-b/2         ,    h/2+L+d/2]) #6
+                self.perimeter_pts.append([-b/2-L-d/2   ,    h/2])       #7
                 self.perimeter_pts.append([-b/2-L-d/2   ,    -h/2-self.overhang_y])
 
                 self.studrail_pts.append([[-b/2, h/2]   ,    [-b/2, h/2+L]]) #top
