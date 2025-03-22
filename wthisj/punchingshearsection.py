@@ -542,24 +542,28 @@ class PunchingShearSection:
             self.add_perimeter(pt1, pt2, self.slab_depth)
         
         
-    def add_opening(self, dx, dy, width, height):
+    def add_opening(self, xo, yo, width, depth):
         """
-        Add an opening nearby. Affected perimeter will automatically be removed.
+        Add an opening by specifying the x,y coordinate of the bottom left corner, as well as
+        an opening size. Please note the column centroid is always at (0,0). 
+        
+        Affected perimeter will automatically be removed from the section. A warning will be printed
+        to console if the opening is more than 4h away.
         
         Arguments:
-            dx              float:: x-offset from column center (0,0) to bottom left corner of opening
-            dy              float:: y-offset from column center (0,0) to bottom left corner of opening
-            width           float:: opening width
-            height          float:: opening height
+            xo              float:: x coordinate to bottom left corner of opening
+            yo              float:: y coordinate to bottom left corner of opening
+            width           float:: opening width (x-dimension)
+            depth           float:: opening depth (y-dimension)
             
         Returns:
             None
         """
         # define opening pts for plotting
-        opening_pts = [[dx, dy],
-                       [dx+width, dy],
-                       [dx+width, dy+height],
-                       [dx, dy+height]]
+        opening_pts = [[xo, yo],
+                       [xo+width, yo],
+                       [xo+width, yo+depth],
+                       [xo, yo+depth]]
         self.openings.append(opening_pts)
         
         
