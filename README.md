@@ -13,7 +13,6 @@
 
 - [Introduction](#introduction)
 - [Quick Start](#quick-start)
-- [Validation Problems](#validation-problems)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Theoretical Background](#theoretical-background)
@@ -23,20 +22,9 @@
 
 ## Introduction
 
-**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations. It does so using the elastic method along various concepts described in ACI 318. Notable features include:
+**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations using concepts described in ACI 318 and ACI 421.1R. Create a critical shear section, add openings, loads, and visualize results in less than 5 lines of python code!
 
-* Supports all column conditions (interior, edge, and corner)
-* Ability to add stud rails (i.e. polygonal shear perimeters)
-* Ability to add openings
-* Interactive visualization of shear stresses
-* Advanced features 
-  * Principal axes rotation
-  * Additional moment due to centroid eccentricity
-  * non-uniform depths shear perimeters
-
-> [!IMPORTANT]
->
-> Please note wthisj calculates $J_{cx}$ and $J_{cy}$ using the recommendations provided in **ACI 421.1R - Guide for Shear Reinforcement for Slabs**. The formulation therein is very slightly different (on the safe side) compared to the ACI 318 provisions for $J_c$. Refer to the [theoretical background](#theoretical-background) section for more info. 
+Please note wthisj numerically approximates $J_{cx}$ and $J_{cy}$ using the formulations discussed in **ACI 421.1R - Guide for Shear Reinforcement for Slabs**, which is slightly different (on the safe side) compared to the ACI 318 provisions for $J_c$. Refer to the [theoretical background](#theoretical-background) section for more info. 
 
 
 
@@ -47,7 +35,7 @@ Here's the minimum viable script.
 ``` python
 import wthisj
 
-# initialize a column perimeter
+# initialize a critical shear section
 column1 = wthisj.PunchingShearSection(col_width=24, col_depth=24, slab_avg_depth=12, condition="I")
 
 # calculate punching shear stress
@@ -62,7 +50,7 @@ Here's a more comprehensive quick start script found in `main.py`:
 ```python
 import wthisj
 
-# initialize a column perimeter
+# initialize a critical shear section
 column1 = wthisj.PunchingShearSection(col_width = 24,
                                       col_depth = 24,
                                       slab_avg_depth = 12,
@@ -93,7 +81,7 @@ column1.plot_results_3D()
 
 ```
 
-* There are 9 possible conditions (1 interior, 4 edge, 4 corner) denoted using the cardinal directions (NW, N, NE, W, I, E, SW, S, SE) one might see on a compass. For example, "NW" is a corner column with slab edge to the top and left.
+* There are 9 possible conditions (1 interior, 4 edge, 4 corner), each represented using the cardinal directions on a compass (NW, N, NE, W, I, E, SW, S, SE), except "I" which stands for interior. For example, "NW" represents a top-left corner column.
 * Units should be in **(KIPS, IN)**. 
 * Sign convention for the applied forces should follow the right-hand rule. Note **V should be negative** unless you are checking uplift. 
 
@@ -137,14 +125,6 @@ Running the main quick start script will produce the following:
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/results_3D.png?raw=true" alt="fig" style="width: 90%;" />
 </div>
-
-
-
-
-
-## Validation Problems
-
-TODO
 
 
 
@@ -449,11 +429,11 @@ So what is the trade-off? The lack of supporting beams means **less redundancy**
 
 ### 2.0 Punching Shear Calculation
 
-Let's start simple and gradually introduce more nuances. For now, the punching shear stress is simply equal to the load transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as rectangular faces offset d/2 from the column face (shown in dotted line below). (4) faces for interior, (3) for edge, and (2) for corner conditions.
+Let's start simple and gradually introduce more nuances. For now, the punching shear stress is simply equal to the force transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as rectangular faces offset d/2 from the column face (shown in dotted line below). (4) faces for interior, (3) for edge, and (2) for corner conditions.
 
 <p align="center"><img src="./doc/theory3.png" width="80%"></p>
 
-Therefore, the total shear area is equal to the perimeter ($b_o$) times the slab depth ($d$). Slab depth is measured from the extreme compression edge to tension rebar centroid (taking the average depth of the two-orthogonal directions).
+The total shear area is equal to the perimeter ($b_o$) multiplied by the slab depth ($d$). Slab depth is measured from the extreme compression edge to tension rebar centroid (taking the average depth of the two-orthogonal directions).
 
 $$A_v = b_o d$$
 
@@ -463,15 +443,15 @@ $$v_u = \frac{V_u}{b_od}$$
 
 In practice, the equation above is only good for preliminary estimates. Moment transfers are always present, and can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is not reasonable to assume zero moment transfer, especially at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. 
 
-To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined elastic stress formulas ($P/A + My/I$), but not exactly the same.
+To account for the effect of moment transfer, ACI-318 provides an equation that is vaguely reminiscent of the combined elastic stress formulas ($P/A + My/I$).
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
+
+Please note that although there is a $\pm$ sign for the second term, it is not always the case that both positive and negative unbalanced moments are possible. For example, an edge column will always have unbalanced moment on one-side.
 
 Below is an illustration of the superposition of shear stresses from the [Macgregor Textbook](https://www.amazon.com/Reinforced-Concrete-Mechanics-Design-6th/dp/0132176521) (slightly modified). Dr. MacGregor is my superhero and I absolutely love his textbook, not least because he is also Canadian.
 
 <p align="center"><img src="./doc/theory7.png" width="100%"></p>
-
-Please note that although there is a $\pm$ sign for the second term, it is not always the case that both positive and negative unbalanced moments are possible. For example, an edge column will always have unbalanced moment on one-side.
 
 Let's go through the variables in the second term one-by-one.
 
@@ -490,7 +470,7 @@ The unbalanced moment described above can transfer into the columns in two ways:
 
 
 
-<p align="center"><img src="./doc/theory5.png" width="40%"></p>
+<p align="center"><img src="./doc/theory5.png" width="60%"></p>
 
 We use the Greek letter gamma ($\gamma$) to denote the percentage of moment transferred through each mechanism. Taken together, the two modes of transfer should add up to 100% (i.e. $\gamma_v + \gamma_f = 1.0$). The proportion of moment transferred by shear ($\gamma_v M_{sc}$) is of interest to us because it will amplify shear stress. ACI-318 has equations for estimating $\gamma_f$ and $\gamma_v$ based on the critical shear section dimensions.
 
@@ -520,11 +500,11 @@ $$x_c = \frac{\sum xA}{\sum A} \mbox{ and } y_c = \frac{\sum yA}{\sum A}$$
 
 **"Polar Moment of Inertia" ($J_c$)**
 
-$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than providing a big table of formulas, let's go through the derivations step-by-step. The calculation procedure for J is vaguely reminiscent of calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic understanding of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
+$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than providing a big table of formulas, let's go through the derivations step-by-step. The calculation procedure for J is very similar to calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic understanding of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
 
 $$I = \sum{ (I_i+A_id_i^2)}$$
 
-First, we break the 3-D shear section into individual rectangular areas:
+First, we break the 3-D shear section into individual rectangular areas, then:
 
 * For the areas highlighted green, we add up its $I_x$ and $I_y$ as well as any $Ad^2$ terms. I think of this area as the "**web**".
 * For the areas highlighted blue, we calculate only its $A d^2$ term and ignore the rest. I think of this area as the "**flange**".
@@ -537,13 +517,13 @@ For the two flange areas highlighted in blue, we only count the $A d^2$ term. Th
 
 $$Ad^2 = (b_2 d) (b_1/2)^2$$
 
-For the two web areas highlighted in green, we will add up both the the  $I_x$ and $I_y$ term. Since the centroid of green rectangle coincide with the centroid of the shear perimeter, we do not need to consider the $A d^2$ term (because d is 0). Recall that for a rectangular area, the formula for moment of inertia is equal to $I = bh^3/12$. Therefore:
+For the two web areas highlighted in green, we will add up both the the  $I_x$ and $I_y$ term. Since the centroid of green rectangle coincide with the centroid of the shear perimeter, we do not need to consider the $A d^2$ term (because d is 0). Recall that moment of inertia for a rectangular area is equal to $I = bh^3/12$. Therefore:
 
 $$I_x = \frac{d b_1^3}{12}$$
 
 $$I_y = \frac{b_1 d^3}{12}$$
 
-Putting all the pieces together, taking note that we have 2 webs and 2 flanges, we arrive at the same equation as above:
+Putting all the pieces together, taking note that we have 2 "webs" and 2 "flanges", we arrive at the same equation for interior condition as above:
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
@@ -553,11 +533,11 @@ $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
 ### 3.0 Nuances To Consider
 
-All of this makes in theory, but in practice, the formulations above are easily strained by non-typical design scenarios. Let's consider some of the nuances that one may encounter.
+All of this makes sense in theory, but in practice, the formulations above are easily strained by real design scenarios. Let's consider some of the nuances that one might encounter.
 
 **Nuance #1: What Happens When There Is Unbalanced Moment About Both Axes?**
 
-There's been [plenty of discussion](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time. Calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I don't think there is consensus yet. I'll leave the engineering judgement to the reader. 
+There's [a lot of discussion](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered concurrently, or one axis at a time. Calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement mysteriously disappeared in the latest version of the report (ACI 421.1R-20). I don't think there is consensus yet which is why I'll leave the engineering judgement to the reader. 
 
 Here's the full shear stress equation if we were to consider unbalanced moment about both axes. Notice that we now need to calculate two $J$ terms!
 
@@ -570,9 +550,9 @@ $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{
 
 **Nuance #2: Is J Calculated Differently For The X and Y Axes?**
 
-Yes! Despite being called a "polar moment of inertia", the $J_c$​​​ term is used like a planar moment of inertia. It is possible to calculate an $J_c$ for both orthogonal axes, you need to swap the "flange" and "web" areas and follow the derivation provided in the previous section.
+Yes! Despite being called a "polar moment of inertia", the $J_c$​​​ term is used like a planar moment of inertia. It is possible to calculate an $J_c$ for both orthogonal axes, you need to swap the "flange" and "web" areas then follow the derivation in the previous section.
 
-The use of $J_c$ to represent planar moment of inertia in concrete design is a confusing anti-pattern. Recall from mechanics of materials that polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion, whereas planar moments of inertia are properties associated with out-of-plane flexure. There is only one possible polar MOI ($J$) , but two planar MOI ($I_x$ and $I_y$) for any cross section. Here are some formulas to jog your memory:
+The use of $J_c$ to represent planar moment of inertia in concrete design is a confusing anti-pattern. Recall from mechanics of materials that polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion, whereas planar moments of inertia are properties associated with out-of-plane flexure. For any cross section, there is only one possible polar MOI ($J$), but two planar MOI ($I_x$ and $I_y$). Here are some formulas to jog your memory:
 
 $$I_z = J = I_x + I_y$$
 
@@ -580,7 +560,7 @@ $$\mbox{shear stress due to torsion}: \tau =Tr/J$$
 
 $$\mbox{normal stress due to flexure}: \sigma = My/I_x \mbox{ and } \sigma=Mx/I_y$$
 
-Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. In essence, we discard the weak axis $I$ term (the one where slab depth is cubed) for the web areas, and end up just calculating the planar moments of inertia.
+Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. In essence, we discard the weak axis $I_y$ term (the one where slab depth is cubed) for the web areas, and end up just calculating the planar moments of inertia.
 
 $J_{cx} = I_x = \int y^2dA$
 
