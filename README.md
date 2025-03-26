@@ -433,7 +433,7 @@ So what is the trade-off? The lack of supporting beams means **less redundancy**
 
 <p align="center"><img src="./doc/theory2.png" width="50%"></p>
 
-### 2.0 Calculating Punching Shear Stress
+### 2.0 Punching Shear Calculation
 
 Let's start simple and gradually introduce more nuances. For now, the punching shear stress is simply equal to the force transferred to the column divided by the area of the failure plane. This failure plane is technically an inverted truncated cone. To simplify, ACI-318 allows the **critical** **shear perimeter** to be approximated as rectangular faces offset d/2 from the column face. (4) faces for interior, (3) for edge, and (2) for corner conditions.
 
@@ -491,7 +491,7 @@ $b_1$ is the critical perimeter dimension parallel to the slab span, whereas $b_
 The parameter c is the orthogonal distance from the neutral axis to any fiber in the perimeter. There are two important nuances worth highlighting here:
 
 * **Consider Signs**: Unbalanced moment is not always symmetrical, where the both positive and negative unbalanced moments are possible. In other words, the shear stresses due to $M_u$ is NOT always additive to the shear stress due to $V_u$. Therefore, the fiber furthest away from the neutral axis is NOT necessarily the governing fiber. 
-* **Shear Section Centroid**: The neutral axis is located at the shear section centroid, NOT the column centroid. This distinction is important because the shear section centroid does NOT always coincide with the column centroid. We will discuss the effect of this offset in section 3.0.
+* **Shear Section Centroid**: The neutral axis is located at the shear section centroid, NOT the column centroid. This distinction is important because the shear section centroid does NOT always coincide with the column centroid. We will discuss the effect of this offset in section 4.0.
 
 <p align="center"><img src="./doc/theory8.png" width="60%"></p>
 
@@ -532,9 +532,17 @@ $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
 
 
+### 3.0 Example
+
+<p align="center"><img src="./doc/theory17.png" width="60%"></p>
 
 
-### 3.0 Nuances To Consider
+
+<p align="center"><img src="./doc/theory18.png" width="60%"></p>
+
+
+
+### 4.0 Nuances To Consider
 
 All of this makes sense in theory. In practice, the formulations above are easily strained by real design scenarios. Let's consider some of the nuances that one might encounter.
 
@@ -567,7 +575,7 @@ $\mbox{shear stress due to torsion}: \tau =Tr/J$
 
 $\mbox{normal stress due to flexure}: \sigma = My/I_x \mbox{ and } \sigma=Mx/I_y$
 
-Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. We will discuss this in depth in Nuance #7 and Section 4.0. In essence, we discard the weak axis $I_y$ term from the web areas (the one where slab depth is cubed). In effect, we end up just calculating the regular planar moments of inertia.
+Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. We will discuss this in depth in Nuance #7 and Section 5.0. In essence, we discard the weak axis $I_y$ term from the web areas (the one where slab depth is cubed). In effect, we end up just calculating the regular planar moments of inertia.
 
 $$J_{cx} = I_x = \int y^2dA$$
 
@@ -576,7 +584,7 @@ $$J_{cy} = I_y = \int x^2dA$$
 
 
 > [!NOTE]
-> wthisj uses numerical approximation to calculate $I_x$ and $I_y$ (ACI 421.1R) rather than using the ACI 318 formulas. In the backend, the perimeter is discretized into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. Refer to Section 4.0 and 5.0 for more info. The user may opt to reduce the fiber size even further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
+> wthisj uses numerical approximation to calculate $I_x$ and $I_y$ (ACI 421.1R) rather than using the ACI 318 formulas. In the backend, the perimeter is discretized into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. Refer to Section 5.0 and 6.0 for more info. The user may opt to reduce the fiber size even further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
 
 
 
@@ -682,9 +690,57 @@ This brings us to some very important questions. How do we calculate $J_c$ for a
 
 
 
+The critical shear section can be decomposed into series of straight segments. Each segment can be represented by a straight line from $(x_1, y_1)$ to $(x_2, y_2)$, where the coordinates are with respect to the critical section centroid.
+
+<p align="center"><img src="./doc/theory16.png" width="50%"></p>
+
+If the segments are purely vertical or horizontal, then we can take advantage of the [parallel axis theorem](https://en.wikipedia.org/wiki/Parallel_axis_theorem#Second_moment_of_area) to calculate the moments of inertia. 
+
+But it gets a little more complicated when diagonals are present. To get the right answer, we will need to calculate and sum up the [line integral](https://tutorial.math.lamar.edu/classes/calciii/LineIntegralsPtI.aspx) of every segment of the section.
+
+$$I_x = \sum \int_c y^2ds$$
+
+$$I_y = \sum \int_c x^2 ds$$
+
+To start, lets parameterize the straight line segment starting at $(x_1, y_1)$ and ending at $(x_2, y_2)$:
+
+$$x = (1-t) x_1 + tx_2 \qquad \mbox{where} \qquad 0\leq t \leq 1$$
+
+$$y = (1-t) y_1 + ty_2 \qquad \mbox{where} \qquad 0\leq t \leq 1$$
+
+We can simplify the integrals above if we let the length of the straight segment be equal to $L$, then the line integrals become
+
+$$I_{xi} = \int_0^1 ((1-t) y_1 + ty_2)^2 Ldt$$
+
+$$I_{yi} = \int_0^1 ((1-t) x_1 + tx_2)^2 Ldt$$
+
+Now the line integral becomes one that we can easily solve.
+
+$$I_{xi} = L \int_0^1 (y_1 -y_1t +y_2t)^2 dt$$
+
+$$I_{xi} = L \int_0^1 (y_1^2 - y_1^2t + y_1y_2t - y_1^2t + y_1^2t^2 -y_1y_2t^2)^2 dt$$
 
 
-### 4.0 What The Heck is J?
+
+Recall that equation for moment of inertia.
+
+$$J_{cx} = I_x = \int y^2dA$$
+
+$$J_{cy} = I_y = \int x^2dA$$
+
+If the 
+
+From here, 
+
+
+
+
+
+
+
+
+
+### 5.0 What The Heck is J?
 
 
 
@@ -702,7 +758,7 @@ This brings us to some very important questions. How do we calculate $J_c$ for a
 
 
 
-### 5.0 Numerical Approximation with wthisj
+### 6.0 Numerical Approximation with wthisj
 
 
 
