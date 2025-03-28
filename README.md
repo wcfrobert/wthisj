@@ -298,33 +298,58 @@ $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
 > [!IMPORTANT]
 >
-> Although this property is referred to as "polar moment of inertia", you should really just think of it as a planar moment of inertia. The use of $J_c$​ to represent planar moment of inertia in concrete design is a confusing anti-pattern because:
+> Although this property is referred to as "polar moment of inertia", you should really just think of it as a planar moment of inertia. The use of $J_c$​ to represent planar moment of inertia in concrete design is a confusing anti-pattern for three reasons:
 >
-> 1. It's used in a flexural-normal-stress-like formula ($\sigma=Mc/I$) rather than a torsional-shear-stress-like formula ($\tau = Tr/J$), 
-> 2. The mathematical relationship $J = I_x + I_y$ we learned in solid mechanics does NOT hold in the formulation above. You can technically calculate two $J_c$ values. 
-> 3. The convoluted rule presented above becomes ill-defined for sections with slanted surfaces.
+> 1. It's used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$) rather than a torsional-shear-stress equation ($\tau = Tr/J$), 
+> 2. The mathematical relationship $J = I_x + I_y$ in solid mechanics is NOT true in the formulation above. You can calculate two $J_c$ values. 
+> 3. The rules presented above becomes convoluted and ill-defined for non-orthogonal (slanted) faces.
 
-Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. 
-
-We will discuss this in depth in Nuance #7 and Section 5.0. In essence, we discard the weak axis $I_y$ term from the web areas (the one where slab depth is cubed). In effect, we end up just calculating the regular planar moments of inertia.
+Indeed, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. In essence, we go back to first principles and just calculate the regular planar moments of inertia:
 
 $$J_{cx} = I_x = \int y^2dA$$
 
 $$J_{cy} = I_y = \int x^2dA$$
 
+Rather than calculating these integrals by hand, we can use the following handy formulas. For a shear section that is composed of $N$ straight segments, let each segment be defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth.
 
+$$A_c =  \sum L d $$
 
+$$J_{cx} = I_x = \sum \frac{L d}{3}(y_1^2 +y_1 y_2 + y_2^2) $$
 
+$$J_{cy} = I_y =  \sum \frac{L d}{3}(x_1^2 +x_1 x_2 + x_2^2) $$
 
-We will discuss this in depth in Section 4.0 and 5.0. 
+$J_{cx}$ and $J_{cy}$ calculated using the formula above is always smaller than $J_c$ by about 5% to 15%. Since $J$ is on the denominator, using the ACI 421.1R equations will always be more conservative. In effect, we are discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed) and end up just calculating the regular planar moments of inertia. Trust these formulas for now... We will discuss $J$ in more detail and derive the formulas above in Section 5.0.
 
 ### 3.0 Example
 
-<p align="center"><img src="./doc/theory17.png" width="60%"></p>
+<p align="center"><img src="./doc/theory17.png" width="70%"></p>
 
 
 
-<p align="center"><img src="./doc/theory18.png" width="60%"></p>
+<p align="center"><img src="./doc/theory18.png" width="70%"></p>
+
+Here's the same output from wthisj:
+
+```python
+import wthisj
+
+# initialize a column perimeter
+column1 = wthisj.PunchingShearSection(col_width = 20,
+                                      col_depth = 20,
+                                      slab_avg_depth = 8,
+                                      condition = "W",
+                                      overhang_x = 0,
+                                      overhang_y = 0,
+                                      studrail_length = 0)
+
+# calculate punching shear stress
+results = column1.solve(Vz = -80, Mx = 0, My = 1400, consider_ecc=False)
+
+# plot results (plotly)
+column1.plot_results_3D()
+```
+
+<p align="center"><img src="./doc/example.png" width="100%"></p>
 
 
 
