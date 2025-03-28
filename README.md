@@ -14,23 +14,23 @@
 - [Introduction](#introduction)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
-- [Usage](#usage)
 - [Theoretical Background](#theoretical-background)
+- [Documentation](#documentation)
 - [Assumptions and Limitations](#assumptions-and-limitations)
 - [License](#license)
 
 
 ## Introduction
 
-**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations based on the concepts described in ACI 318. Create a critical shear section, add loads, and visualize results in less than 3 lines of python code.
+**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations based on the provisions and recommendations in ACI 318 and ACI 421.1R. Create a critical shear section, add loads, and visualize results in less than 3 lines of python code.
 
-Notable Features:
+Notable Features include:
 
-* All column conditions (interior, edge, and corner)
-* Add stud rails (i.e. polygonal shear perimeters)
-* Add openings
+* Supports all column conditions (interior, edge, and corner)
+* Easily add stud rails (i.e. polygonal shear perimeters)
+* Easily add openings
 * Interactive visualization of shear stresses
-* Advanced features like principal axes rotation, consideration moment due to centroid eccentricity, non-uniform depth shear perimeters, numerical approximation of $J_{cx}$ and $J_{cy}$ for any arbitrary sections.
+* Advanced features like principal axes rotation, consideration of moment due to centroid eccentricity, non-uniform depth shear perimeters, fast numerical approximation of $J_{cx}$ and $J_{cy}$ for any arbitrary sections.
 
 
 
@@ -84,12 +84,11 @@ column1.plot_results()
 
 # plot results (plotly)
 column1.plot_results_3D()
-
 ```
 
 * There are 9 possible conditions (1 interior, 4 edge, 4 corner), each represented using the cardinal directions on a compass (NW, N, NE, W, I, E, SW, S, SE), except "I" which stands for interior. For example, "NW" represents a top-left corner column.
 * Units should be in **(KIPS, IN)**. 
-* Sign convention for the applied forces should follow the right-hand rule. Note **Vz should be negative** unless you are checking uplift. 
+* Sign convention for the applied forces should follows the right-hand rule. Note **Vz should be negative** unless you are checking uplift. 
 
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/signconvention.png?raw=true" alt="fig" style="width: 70%;" />
@@ -107,14 +106,14 @@ Running the main quick start script will produce the following:
 * `PunchingShearSection.solve()` runs an analysis and returns a result dataframe. The critical shear section is discretized numerically into many fibers, each row in the data frame represents one fiber. Key calculation results will be printed to console if `verbose` is set to True.
 
 <div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve.png?raw=true" alt="fig" style="width: 70%;" />
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve.png?raw=true" alt="fig" style="width: 90%;" />
 </div>
+
 
 
 <div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve_status.png?raw=true" alt="fig" style="width: 70%;" />
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/solve_status.png?raw=true" alt="fig" style="width: 50%;" />
 </div>
-
 
 
 
@@ -129,8 +128,9 @@ Running the main quick start script will produce the following:
 * `PunchingShearSection.plot_results_3D()` generates a interactive 3D visualization in html format - viewable in most web browsers.
 
 <div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/results_3D.png?raw=true" alt="fig" style="width: 90%;" />
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/results_3D.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
+
 
 
 
@@ -141,7 +141,7 @@ Running the main quick start script will produce the following:
 Run main.py using your base Anaconda environment. 
 
 1. Download Anaconda python
-2. Download this package (click the green "Code" button and download zip file)
+2. Download this package (click the green "Code" button above or download the latest release)
 3. Open and run "main.py" in Anaconda's Spyder IDE.
 
 The following packages are used:
@@ -186,236 +186,6 @@ pip install wthisj
 ```
 
 
-## Usage
-
-Here are all the public methods available to the user:
-
-- `PunchingShearSection(col_width, col_height, slab_avg_depth, condition, overhang_x=0, overhang_y=0, studrail_length=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
-- `PunchingShearSection.add_perimeter(start, end, depth)`
-- `PunchingShearSection.add_opening(xo, yo, width, depth)`
-- `PunchingShearSection.rotate(angle)`
-
-- `PunchingShearSection.solve(Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_ecc=False, auto_rotate=True, verbose=True)`
-
-- `PunchingShearSection.preview()`
-- `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
-- `PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
-
-If you need guidance at any time, use the help() command to access method docstrings. For example, here is the output for `help(wthisj.PunchingShearSection.add_opening)`
-
-<div align="center">
-  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/help.png?raw=true" alt="fig" style="width: 80%;" />
-</div>
-
-
-### Define Shear Perimeter
-
-**`PunchingShearSection(col_width, col_depth, slab_avg_depth, condition, overhang_x=0, overhang_y=0, studrail_length=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate and return a PunchingShearSection object.
-
-* col_width: float
-  * Column dimension along x-axis
-
-* col_depth: float
-  * Column dimension along y-axis
-
-* slab_avg_depth: float
-  * Slab depth from outermost compression fiber to outermost tension rebar. Use the average depth of two orthogonal slab directions.
-
-* condition: string
-  * String used to specify interior, edge, or corner column condition. Valid inputs look like the cardinal directions on a compass.
-  * "N", "S", "W", "E", "NW", "NE", "SW", "SE"
-  * For example, "NW" is a corner condition with slab edge to the top left. "W" is an edge condition with slab edge on the left.
-
-* overhang_x: float (OPTIONAL)
-  * Default = 0
-  * Slab overhang dimension along the X-axis beyond column face.
-  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition (where d is the slab depth, and b is the column dimension perpendicular to the edge).
-
-* overhang_y: float (OPTIONAL)
-  * Default = 0
-  * Slab overhang dimension along the Y-axis beyond column face.
-  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition (where d is the slab depth, and b is the column dimension perpendicular to the edge).
-
-* studrail_length: float (OPTIONAL)
-  * Default = 0
-  * Stud rails may be added to expand the punching shear perimeter into a polygonal pattern. The exact geometry is described in ACI 318-19. We will assume stud rails always exist at the column corners, and that a minimum of two rails exist on each face. Parameters like spacing and number of stud rails are irrelevant here because all we care about is the perimeter geometry (wthisj does NOT calculate any shear capacities!)
-
-* auto_generate_perimeter: bool (OPTIONAL)
-  * Default = True
-  * Automatically generate the punching shear perimeter based on the arguments entered by the user above. Alternatively, the user may set this parameter to False, then draw each perimeter line manually using the `.add_perimeter()` method.
-
-* PATCH_SIZE: float (OPTIONAL)
-  * Default = 0.5
-  * By default, the shear perimeter is numerically discretized into 0.5" fibers. You can specify a smaller fiber size to improve accuracy. 0.5" is small enough for most cases.
-
-```python
-# define a top-left corner column (24"x24") supporting a slab with rebar depth of 12". 
-# Add 36" long stud rails on the inner faces. Slab overhang is 12" in both directions.
-column1 = wthisj.PunchingShearSection(col_width = 24,
-                                      col_deptht = 24,
-                                      slab_avg_depth = 12,
-                                      condition = "NW",
-                                      overhang_x = 12,
-                                      overhang_y = 12,
-                                      studrail_length = 36)
-```
-
-
-
-### Add Openings
-
-**`PunchingShearSection.add_opening(xo, yo, width, depth)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
-
-* xo: float
-  * x-offset from column center (0,0) to the bottom left corner of opening
-* yo: float
-  * y-offset from column center (0,0) to the bottom left corner of opening
-* width: float
-  * opening width
-* depth: float
-  * opening height
-
-
-```python
-# add a 18" x 20" opening with bottom-left corner located 80" left and 10" below the column center.
-column1.add_opening(xo=80, yo=-10, width=18, depth=20)
-```
-
-
-
-
-
-### Run Analysis
-
-**`PunchingShearSection.solve(Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_ecc=False, auto_rotate=True, verbose=True)`** - Start analysis routine. Returns a dataframe where each row is a fiber within the shear perimeter, and the columns are the intermediate calculation results. 
-
-* Vz: float
-  * Applied shear force in KIPS. Should always be NEGATIVE unless you are checking uplift
-* Mx: float
-  * Applied moment about the X-axis in KIP.IN.
-* My: float
-  * Applied moment about the Y-axis in KIP.IN.
-* gamma_vx: float or string (OPTIONAL)
-  * Percentage of X moment transferred to the column via shear. wthisj will automatically calculate this. Or the user may enter a specific value of gamma_vx (e.g. 0.4)
-* gamma_vy: float or string (OPTIONAL)
-  * Percentage of Y moment transferred to the column via shear. wthisj will automatically calculate this. Or the user may enter a specific value of gamma_vy (e.g. 0.4)
-* consider_ecc: bool (OPTIONAL)
-  * Whether or not to consider additional moment due to eccentricity between the column centroid and perimeter centroid. Defaults to True. Refer to the theory section for more info!
-* auto_rotate: bool (OPTIONAL)
-  * Whether or not to auto-rotate geometry if it is not in principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info.
-* verbose: bool (OPTIONAL)
-  * Whether or not to printout calculation result and other helpful messages. Default = True.
-
-
-```python
-# Check punching shear stress for a perimeter subjected to 100 kips of shear, 400 kips.in of moment in both directions.
-# Not rotating the section to principal orientation.
-# Not considering additional moment due to eccentricity between column and perimeter centroid.
-results = column1.solve(Vz = -100,
-                        Mx = 400,
-                        My = 400,
-                        consider_ecc=False,
-                        auto_rotate=False, 
-                        verbose=True)
-```
-
-
-
-### Preview Geometry
-
-**`PunchingShearSection.preview()`** - Preview critical shear perimeter, openings, slab edges, and other surrounding contexts. Geometric properties like $b_o$ and $I_x$ are also shown. This method returns a matplotlib fig object.
-
-* No argument necessary.
-
-```python
-# visualize what the shear perimeter looks like
-fig1 = column1.preview()
-```
-
-
-
-### Visualize Results - 2D
-
-**`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`** - Visualize punching shear calculation results and stress contour. This method returns a matplotlib fig object.
-
-* colormap: string (OPTIONAL)
-  * named colormap. Here's a [list of all available colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html). "jet" is a common one for stress visualization.
-* cmin: float or string (OPTIONAL)
-  * specify min range for color mapping. Default = min(stress)
-* cmax: float or string (OPTIONAL)
-  * specify max range for color mapping. Default = max(stress)
-
-```python
-# visualize shear stress plot. Use the "turbo" colormap instead 
-# set cmax to 160 psi so that anything higher is colored red
-fig2 = column1.plot_results(colormap="turbo", cmax=160)
-```
-
-
-
-### Visualize Results - 3D
-
-**`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`** - Visualize punching shear calculation results in an interactive 3D format using plotly. This method returns a plotly figure object.
-
-
-* colormap: string (OPTIONAL)
-  * named colormap. Here's a [list of all available colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html). "jet" is a common one for stress visualization.
-* cmin: float or string (OPTIONAL)
-  * specify min range for color mapping. Default = min(stress)
-* cmax: float or string (OPTIONAL)
-  * specify max range for color mapping. Default = max(stress)
-* scale: float (OPTIONAL)
-  * scaling factor used to adjust the size of vector plot. Default is 10. Which means the max vector is 10" in the Z-dimension.
-
-
-```python
-# visualize shear stress. Use the "plasma" colormap
-# change scale to 5 so the stress vectors are not too large.
-fig3 = column1.plot_results_3D(colormap="plasma", scale=5)
-```
-
-
-
-
-
-### Advanced Features
-
-**`PunchingShearSection.add_perimeter(start, end, depth)`** - Draw a line of shear perimeter. This is an advanced feature for users who wish to draw highly customized perimeter, such as ones with non-uniform depths. This is not needed in most cases because the `auto_generate_perimeter` parameter is set to True during initialization, and a perimeter is automatically generated. This method modifies the PunchingShearSection object internally and does not return anything.
-
-* start: [float]
-  * [x, y] coordinate of the start point
-* end: [float]
-  * [x, y] coordinate of the end point
-* depth: float
-  * slab depth along this line
-
-
-```python
-# define a 18" x 18" column, but turn auto-generate perimeter off
-column1 = wthisj.PunchingShearSection(width = 18,
-                                      height = 18,
-                                      slab_depth = 12,
-                                      condition = "I",
-                                      auto_generate_perimeter = False)
-
-# draw a custom perimeter where one side has a slab depth of 6" rather than 12"
-column1.add_perimeter(start=[-15,-15], end=[-15,15], depth=12)
-column1.add_perimeter(start=[-15,15], end=[12,15], depth=12)
-column1.add_perimeter(start=[12,15], end=[12,-15], depth=6)
-column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
-```
-
-**`PunchingShearSection.rotate(angle)`** - Rotate the section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info. This method modifies the PunchingShearSection object internally and does not return anything.
-
-* angle: float
-  * rotate shear perimeter by a specified **DEGREE** measured counter clockwise from the +X axis.
-
-
-```python
-# rotate the column by 45 degrees counter-clockwise from +X axis.
-column1.rotate(angle=45)
-```
-
 
 ## Theoretical Background
 
@@ -439,7 +209,7 @@ Let's start simple and gradually introduce more nuances. For now, the punching s
 
 <p align="center"><img src="./doc/theory3.png" width="80%"></p>
 
-The total shear area is equal to the perimeter ($b_o$) multiplied by the slab depth ($d$). Slab depth is measured from the extreme compression edge to tension rebar centroid (taking the average depth of the two-orthogonal directions).
+The total shear area is equal to the perimeter ($b_o$) multiplied by the slab depth ($d$). Slab depth is measured from the extreme compression fiber to tension rebar centroid (taking the average depth of the two-orthogonal slab directions).
 
 $$A_v = b_o d$$
 
@@ -449,7 +219,7 @@ $$v_u = \frac{V_u}{b_od}$$
 
 In practice, the equation above is only good for preliminary estimates. Moment transfers are always present, and can arise from unequal spans, uneven load distribution, uneven stiffness, and many other reasons. It is not reasonable to assume zero moment transfer, especially at edge and corner columns. Concrete buildings are monolithic after all - there is no such thing as pinned in concrete design. 
 
-To account for the effect of moment transfer, ACI-318 provides an equation that is should remind you of the combined elastic stress formulas ($P/A + My/I$). Please note that although there is a $\pm$ sign for the second term, it is not always the case that both positive and negative unbalanced moments are possible. For example, an edge column will always have unbalanced moment on one-side.
+To account for the effect of moment transfer, ACI-318 provides an equation that is should remind you of the combined elastic stress formulas ($P/A + My/I$). Please note that although there is a $\pm$ sign for the second term, it is not always the case that both positive and negative values are possible. For example, an edge column will always have unbalanced moment on one-side.
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_v M_{sc} c}{J_c}$$
 
@@ -469,8 +239,8 @@ The slab moment transferred into the supporting column is known as **unbalanced 
 
 The unbalanced moment described above can transfer into the columns in two ways:
 
-* Flexure within a limited transfer widths ($\gamma_f$)
-* Shear ($\gamma_v$)
+1. Flexure within a limited transfer widths ($\gamma_f$)
+2. Shear ($\gamma_v$)
 
 
 
@@ -490,24 +260,20 @@ $b_1$ is the critical perimeter dimension parallel to the slab span, whereas $b_
 
 The parameter c is the orthogonal distance from the neutral axis to any fiber in the perimeter. There are two important nuances worth highlighting here:
 
-* **Consider Signs**: Unbalanced moment is not always symmetrical, where the both positive and negative unbalanced moments are possible. In other words, the shear stresses due to $M_u$ is NOT always additive to the shear stress due to $V_u$. Therefore, the fiber furthest away from the neutral axis is NOT necessarily the governing fiber. 
-* **Shear Section Centroid**: The neutral axis is located at the shear section centroid, NOT the column centroid. This distinction is important because the shear section centroid does NOT always coincide with the column centroid. We will discuss the effect of this offset in section 4.0.
-
-<p align="center"><img src="./doc/theory8.png" width="60%"></p>
-
-We can calculate the shear section centroid using the first moment of area formulas:
+1. Unbalanced moment is not always symmetrical where the both positive and negative values are possible. In other words, the shear stresses due to $M_u$ is NOT always additive to the shear stress due to $V_u$. Therefore, the fiber furthest away from the neutral axis is NOT necessarily the governing fiber. 
+2. The neutral axis is located at the shear section centroid, NOT the column centroid. This distinction is important because the shear section centroid does NOT always coincide with the column centroid. We will discuss the effect of this offset in section 4.0. We can calculate the shear section centroid using the first moment of area formulas:
 
 $$x_c = \frac{\sum xA}{\sum A} \mbox{ and } y_c = \frac{\sum yA}{\sum A}$$
 
 
 
+<p align="center"><img src="./doc/theory8.png" width="60%"></p>
+
 
 
 **"Polar Moment of Inertia" ($J_c$)**
 
-$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than providing a big table of formulas, let's go through the derivations step-by-step. The calculation procedure for J is very similar to calculating section properties with the composite area formulas and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic understanding of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts.
-
-$$\bar{I} = \sum{ (I+Ad^2)}$$
+$J_c$ is often referred to as a "section property analogous to polar moment of inertia". There are many design tables and formulas to help you calculate J. Rather than providing a big table of formulas, let's go through the derivations step-by-step. The calculation procedure for J is very similar to calculating section properties with the composite area method and parallel axis theorem, with a few idiosyncrasies that I will highlight. Before proceeding further, I'll assume a basic understanding of [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) and related concepts (i.e. $\bar{I} = \sum{ (I+Ad^2)}$).
 
 First, we break the 3-D shear section into individual rectangular areas, then:
 
@@ -530,7 +296,27 @@ Putting all the pieces together, taking note that we have 2 "webs" and 2 "flange
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
+> [!IMPORTANT]
+>
+> Although this property is referred to as "polar moment of inertia", you should really just think of it as a planar moment of inertia. The use of $J_c$​ to represent planar moment of inertia in concrete design is a confusing anti-pattern because:
+>
+> 1. It's used in a flexural-normal-stress-like formula ($\sigma=Mc/I$) rather than a torsional-shear-stress-like formula ($\tau = Tr/J$), 
+> 2. The mathematical relationship $J = I_x + I_y$ we learned in solid mechanics does NOT hold in the formulation above. You can technically calculate two $J_c$ values. 
+> 3. The convoluted rule presented above becomes ill-defined for sections with slanted surfaces.
 
+Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. 
+
+We will discuss this in depth in Nuance #7 and Section 5.0. In essence, we discard the weak axis $I_y$ term from the web areas (the one where slab depth is cubed). In effect, we end up just calculating the regular planar moments of inertia.
+
+$$J_{cx} = I_x = \int y^2dA$$
+
+$$J_{cy} = I_y = \int x^2dA$$
+
+
+
+
+
+We will discuss this in depth in Section 4.0 and 5.0. 
 
 ### 3.0 Example
 
@@ -768,6 +554,245 @@ From here,
 
 
 
+
+
+
+
+
+
+
+
+
+
+## Documentation
+
+Here are all the public methods available to the user:
+
+- `PunchingShearSection(col_width, col_height, slab_avg_depth, condition, overhang_x=0, overhang_y=0, studrail_length=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`
+- `PunchingShearSection.add_perimeter(start, end, depth)`
+- `PunchingShearSection.add_opening(xo, yo, width, depth)`
+- `PunchingShearSection.rotate(angle)`
+
+- `PunchingShearSection.solve(Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_ecc=False, auto_rotate=True, verbose=True)`
+
+- `PunchingShearSection.preview()`
+- `PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`
+- `PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`
+
+If you need guidance at any time, use the help() command to access method docstrings. For example, here is the output for `help(wthisj.PunchingShearSection.add_opening)`
+
+<div align="center">
+  <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/help.png?raw=true" alt="fig" style="width: 80%;" />
+</div>
+
+
+### Define Shear Perimeter
+
+**`PunchingShearSection(col_width, col_depth, slab_avg_depth, condition, overhang_x=0, overhang_y=0, studrail_length=0, auto_generate_perimeter=True, PATCH_SIZE=0.5)`** - Instantiate and return a PunchingShearSection object.
+
+* col_width: float
+  * Column dimension along x-axis
+
+* col_depth: float
+  * Column dimension along y-axis
+
+* slab_avg_depth: float
+  * Slab depth from outermost compression fiber to outermost tension rebar. Use the average depth of two orthogonal slab directions.
+
+* condition: string
+  * String used to specify interior, edge, or corner column condition. Valid inputs look like the cardinal directions on a compass.
+  * "N", "S", "W", "E", "NW", "NE", "SW", "SE"
+  * For example, "NW" is a corner condition with slab edge to the top left. "W" is an edge condition with slab edge on the left.
+
+* overhang_x: float (OPTIONAL)
+  * Default = 0
+  * Slab overhang dimension along the X-axis beyond column face.
+  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition (where d is the slab depth, and b is the column dimension perpendicular to the edge).
+
+* overhang_y: float (OPTIONAL)
+  * Default = 0
+  * Slab overhang dimension along the Y-axis beyond column face.
+  * Based on CRSI recommendations, overhang exceeding b/2 + d are treated as interior condition (where d is the slab depth, and b is the column dimension perpendicular to the edge).
+
+* studrail_length: float (OPTIONAL)
+  * Default = 0
+  * Stud rails may be added to expand the punching shear perimeter into a polygonal pattern. The exact geometry is described in ACI 318-19. We will assume stud rails always exist at the column corners, and that a minimum of two rails exist on each face. Parameters like spacing and number of stud rails are irrelevant here because all we care about is the perimeter geometry (wthisj does NOT calculate any shear capacities!)
+
+* auto_generate_perimeter: bool (OPTIONAL)
+  * Default = True
+  * Automatically generate the punching shear perimeter based on the arguments entered by the user above. Alternatively, the user may set this parameter to False, then draw each perimeter line manually using the `.add_perimeter()` method.
+
+* PATCH_SIZE: float (OPTIONAL)
+  * Default = 0.5
+  * By default, the shear perimeter is numerically discretized into 0.5" fibers. You can specify a smaller fiber size to improve accuracy. 0.5" is small enough for most cases.
+
+```python
+# define a top-left corner column (24"x24") supporting a slab with rebar depth of 12". 
+# Add 36" long stud rails on the inner faces. Slab overhang is 12" in both directions.
+column1 = wthisj.PunchingShearSection(col_width = 24,
+                                      col_deptht = 24,
+                                      slab_avg_depth = 12,
+                                      condition = "NW",
+                                      overhang_x = 12,
+                                      overhang_y = 12,
+                                      studrail_length = 36)
+```
+
+
+
+### Add Openings
+
+**`PunchingShearSection.add_opening(xo, yo, width, depth)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
+
+* xo: float
+  * x-offset from column center (0,0) to the bottom left corner of opening
+* yo: float
+  * y-offset from column center (0,0) to the bottom left corner of opening
+* width: float
+  * opening width
+* depth: float
+  * opening height
+
+
+```python
+# add a 18" x 20" opening with bottom-left corner located 80" left and 10" below the column center.
+column1.add_opening(xo=80, yo=-10, width=18, depth=20)
+```
+
+
+
+
+
+### Run Analysis
+
+**`PunchingShearSection.solve(Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", consider_ecc=False, auto_rotate=True, verbose=True)`** - Start analysis routine. Returns a dataframe where each row is a fiber within the shear perimeter, and the columns are the intermediate calculation results. 
+
+* Vz: float
+  * Applied shear force in KIPS. Should always be NEGATIVE unless you are checking uplift
+* Mx: float
+  * Applied moment about the X-axis in KIP.IN.
+* My: float
+  * Applied moment about the Y-axis in KIP.IN.
+* gamma_vx: float or string (OPTIONAL)
+  * Percentage of X moment transferred to the column via shear. wthisj will automatically calculate this. Or the user may enter a specific value of gamma_vx (e.g. 0.4)
+* gamma_vy: float or string (OPTIONAL)
+  * Percentage of Y moment transferred to the column via shear. wthisj will automatically calculate this. Or the user may enter a specific value of gamma_vy (e.g. 0.4)
+* consider_ecc: bool (OPTIONAL)
+  * Whether or not to consider additional moment due to eccentricity between the column centroid and perimeter centroid. Defaults to True. Refer to the theory section for more info!
+* auto_rotate: bool (OPTIONAL)
+  * Whether or not to auto-rotate geometry if it is not in principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info.
+* verbose: bool (OPTIONAL)
+  * Whether or not to printout calculation result and other helpful messages. Default = True.
+
+
+```python
+# Check punching shear stress for a perimeter subjected to 100 kips of shear, 400 kips.in of moment in both directions.
+# Not rotating the section to principal orientation.
+# Not considering additional moment due to eccentricity between column and perimeter centroid.
+results = column1.solve(Vz = -100,
+                        Mx = 400,
+                        My = 400,
+                        consider_ecc=False,
+                        auto_rotate=False, 
+                        verbose=True)
+```
+
+
+
+### Preview Geometry
+
+**`PunchingShearSection.preview()`** - Preview critical shear perimeter, openings, slab edges, and other surrounding contexts. Geometric properties like $b_o$ and $I_x$ are also shown. This method returns a matplotlib fig object.
+
+* No argument necessary.
+
+```python
+# visualize what the shear perimeter looks like
+fig1 = column1.preview()
+```
+
+
+
+### Visualize Results - 2D
+
+**`PunchingShearSection.plot_results(colormap="jet", cmin="auto", cmax="auto")`** - Visualize punching shear calculation results and stress contour. This method returns a matplotlib fig object.
+
+* colormap: string (OPTIONAL)
+  * named colormap. Here's a [list of all available colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html). "jet" is a common one for stress visualization.
+* cmin: float or string (OPTIONAL)
+  * specify min range for color mapping. Default = min(stress)
+* cmax: float or string (OPTIONAL)
+  * specify max range for color mapping. Default = max(stress)
+
+```python
+# visualize shear stress plot. Use the "turbo" colormap instead 
+# set cmax to 160 psi so that anything higher is colored red
+fig2 = column1.plot_results(colormap="turbo", cmax=160)
+```
+
+
+
+### Visualize Results - 3D
+
+**`PunchingShearSection.plot_results_3D(colormap="jet", cmin="auto", cmax="auto", scale=10)`** - Visualize punching shear calculation results in an interactive 3D format using plotly. This method returns a plotly figure object.
+
+
+* colormap: string (OPTIONAL)
+  * named colormap. Here's a [list of all available colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html). "jet" is a common one for stress visualization.
+* cmin: float or string (OPTIONAL)
+  * specify min range for color mapping. Default = min(stress)
+* cmax: float or string (OPTIONAL)
+  * specify max range for color mapping. Default = max(stress)
+* scale: float (OPTIONAL)
+  * scaling factor used to adjust the size of vector plot. Default is 10. Which means the max vector is 10" in the Z-dimension.
+
+
+```python
+# visualize shear stress. Use the "plasma" colormap
+# change scale to 5 so the stress vectors are not too large.
+fig3 = column1.plot_results_3D(colormap="plasma", scale=5)
+```
+
+
+
+
+
+### Advanced Features
+
+**`PunchingShearSection.add_perimeter(start, end, depth)`** - Draw a line of shear perimeter. This is an advanced feature for users who wish to draw highly customized perimeter, such as ones with non-uniform depths. This is not needed in most cases because the `auto_generate_perimeter` parameter is set to True during initialization, and a perimeter is automatically generated. This method modifies the PunchingShearSection object internally and does not return anything.
+
+* start: [float]
+  * [x, y] coordinate of the start point
+* end: [float]
+  * [x, y] coordinate of the end point
+* depth: float
+  * slab depth along this line
+
+
+```python
+# define a 18" x 18" column, but turn auto-generate perimeter off
+column1 = wthisj.PunchingShearSection(width = 18,
+                                      height = 18,
+                                      slab_depth = 12,
+                                      condition = "I",
+                                      auto_generate_perimeter = False)
+
+# draw a custom perimeter where one side has a slab depth of 6" rather than 12"
+column1.add_perimeter(start=[-15,-15], end=[-15,15], depth=12)
+column1.add_perimeter(start=[-15,15], end=[12,15], depth=12)
+column1.add_perimeter(start=[12,15], end=[12,-15], depth=6)
+column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
+```
+
+**`PunchingShearSection.rotate(angle)`** - Rotate the section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info. This method modifies the PunchingShearSection object internally and does not return anything.
+
+* angle: float
+  * rotate shear perimeter by a specified **DEGREE** measured counter clockwise from the +X axis.
+
+
+```python
+# rotate the column by 45 degrees counter-clockwise from +X axis.
+column1.rotate(angle=45)
+```
 
 
 
