@@ -796,21 +796,13 @@ column1.rotate(angle=45)
 
 
 
-
-
-
-
-
-
 ## Assumptions and Limitations
 
-TODO
-
-* units, difference in J formulation, numerical approximation, max stress at point vs surface
-
-I've written in great length about how to determine the shear stress **demand**. But what about allowable shear **capacity**? Unfortunately, I will not be covering capacity in detail here. Concrete strength is mostly empirical and based on experimental testing. In general, the building code specifies an allowable shear stress ranging from $2\sqrt{f'_c}$ to  $4\sqrt{f'_c}$Wthisj will not calculate punching shear capacity. Please refer to the building code for more guidance. 
-
-
+* Units should be in **(KIPS, IN)**. 
+* wthisj calculates $J_c$ using the recommendations in ACI 421.1R which differs (on the safe side) compared to ACI 318. Refer to section 5 of the Theoretical Background for more info.
+* wthisj works by discretizing the critical shear perimeter into tiny **0.5 inch fibers**, each fiber has an infinitesimal area (dA) which is then summed to approximate $J_c$ and other parameters. The default fiber size is usually accurate enough; however, users may opt to reduce the fiber size further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
+* wthisj will only calculate shear stress **demand**. Please calculate concrete shear **capacity** yourself. It should be noted that wthisj calculates demand using a very specific methodology applicable to the US design practice only. Other countries have their own methods of calculating punching shear stress (e.g. EN 1992, fib Model Code 2010). Do NOT mix-and-match building codes when comparing demands to capacity. 
+* This is NOT enterprise-grade software. Users assume full responsibility for verifying results and making sure things make sense.
 
 
 ## License
