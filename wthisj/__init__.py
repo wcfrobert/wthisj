@@ -1,8 +1,8 @@
 """
-wthisj is a python package that can perform punching shear stress calculation.
+wthisj is a python package that can perform punching shear stress calculations.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Robert Wang"
 __license__ = "MIT"
 

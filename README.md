@@ -463,7 +463,7 @@ The addition of shear reinforcements (stud rails) drastically increases a sectio
 
 ### 5.0 What The Heck is J?
 
-ACI-318 defines the parameter $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, let's go back to first principles. Recall from mechanics of materials a few key equations:
+ACI-318 defines $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, let's go back to first principles. Recall from mechanics of materials some key equations:
 
 $$\mbox{planar moments of inertia about X axis: } I_x=\int y^2dA$$
 
@@ -477,41 +477,41 @@ $$\mbox{shear stress due to torsion: } \tau= Tr/J$$
 
 For any cross section, there can only be one polar moment of inertia ($J$) - which is used to calculate shear stress due to in-plane torsion (usually for circular shafts). On the other hand, a section can have two planar moments of inertia ($I_x$ and $I_y$) - which are used to calculate normal stress due to out-of-plane flexure.
 
-The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is not a torsion because it's applied out-of-plane, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but ultimately became an confusing anti pattern. $J_c$ is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Despite being a polar moment of inertia, you can calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does NOT hold. Lastly, $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
+The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is not a torsion because it's applied out-of-plane, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but ultimately became an confusing anti pattern. $J_c$ is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Despite being a polar moment of inertia, you can calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does not hold. Lastly, $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
 
-Due to these drawbacks, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. The recommendation is basically: **forget about $J_c$, just calculate $I_x$ and $I_y$​.** Recall from first principles the definition of planar moments of inertia:
+Because of these drawbacks, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. The recommendation is basically this: **forget about $J_c$, just calculate $I_x$ and $I_y$​.** 
 
 $$I_x = \int y^2dA \approx J_{cx}$$
 
 $$I_y = \int x^2dA \approx J_{cy}$$
 
-Rather than calculating the integral by hand, we can use the handy formulas below. Let a shear section be composed of $N$ straight segments, each segment is defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth. We can calculate $J$ as follows:
+> [!NOTE]
+>
+> It turns out $I_{x}$ and $I_{y}$ approximates $J_{cx}$ and $J_{cy}$ very well. The former is usually around 95% of the latter, and since $J_c$ is on the denominator, using the ACI 421.1R equations will always be more conservative. In effect, we are discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed), and end up just calculating a planar moment of inertia.
+
+Rather than calculating the integral by hand, we can use the handy formulas below. Let a shear section be composed of $N$ straight segments, each segment is defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth:
 
 $$I_x = \sum \frac{L d}{3}(y_1^2 +y_1 y_2 + y_2^2) $$
 
 $$I_y =  \sum \frac{L d}{3}(x_1^2 +x_1 x_2 + x_2^2) $$
 
-> [!NOTE]
->
-> It turns out $I_{x}$ and $I_{y}$ approximates $J_{cx}$ and $J_{cy}$ very well. The former is usually around 95% of the latter, and since $J$ is on the denominator, using the ACI 421.1R equations will always be more conservative. We are effectively discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed).
-
-Let's derive the equation above. Most critical shear section can be decomposed into series of straight segments. Each segment can be represented by a straight line from $(x_1, y_1)$ to $(x_2, y_2)$, where the coordinates are with respect to the critical section centroid.
+Let's derive the formulas above ourselves. A single segment of a multi-segment shear perimeter is illustrated below.
 
 <p align="center"><img src="./doc/theory16.png" width="50%"></p>
 
-If the segments are purely vertical or horizontal, then we can take advantage of the [parallel axis theorem](https://en.wikipedia.org/wiki/Parallel_axis_theorem#Second_moment_of_area) to calculate the moments of inertia without solving any integrals. But it gets a little more complicated when diagonals are present. To get the right answer, we will need calculate the [line integral](https://tutorial.math.lamar.edu/classes/calciii/LineIntegralsPtI.aspx) of every segment and sum them up.
+If a shear section is composed of only vertical or horizontal segments, we can take advantage of the [parallel axis theorem](https://en.wikipedia.org/wiki/Parallel_axis_theorem#Second_moment_of_area) without solving any integrals. But it gets a little more complicated when diagonals are present. To get the right answer, we will need calculate the [line integral](https://tutorial.math.lamar.edu/classes/calciii/LineIntegralsPtI.aspx) of individual segments, then sum the contribution of all segments.
 
-$$I_x = \sum \int_c y^2ds$$
+For brevity, I will derive the formula for $I_x$ only. The derivation for $I_y$ is exactly the same just with x and y swapped. For a single straight segment:
 
-$$I_y = \sum \int_c x^2 ds$$
+$$I_x = \int_c y^2dA$$
 
-Recall that a straight line segment starting at $(x_1, y_1)$ and ending at $(x_2, y_2)$ can be [parameterized](https://tutorial.math.lamar.edu/Classes/CalcII/ParametricEqn.aspx) as:
+A straight line segment starting at $(x_1, y_1)$ and ending at $(x_2, y_2)$ can be [parameterized](https://tutorial.math.lamar.edu/Classes/CalcII/ParametricEqn.aspx) as:
 
 $$x = x_1 + t(x_2-x_1) \qquad \mbox{where} \qquad 0\leq t \leq 1$$
 
 $$y = y_1 + t(y_2 - y_1) \qquad \mbox{where} \qquad 0\leq t \leq 1$$
 
-For a straight segment, the differential [arch length](https://tutorial.math.lamar.edu/Classes/CalcII/ParaArcLength.aspx) can be simplified as follows:
+Furthermore, we can simplify the differential arch length (for a straight segment) as:
 
 $$ds = \sqrt{(\frac{dx}{dt})^2 + (\frac{dy}{dt})^2} dt$$
 
@@ -523,53 +523,43 @@ $$ds = \sqrt{(x_2-x_1)^2 + (y_2-y_1)^2} dt$$
 
 $$ds = L dt$$
 
-For brevity, I will derive the formula for $I_x$ only. The derivation for $I_y$ is exactly the same just with x and y swapped. Substitute the equations above into our integral:
+The differential area is equal to the slab depth ($d$) multiplied by the differential [arch length](https://tutorial.math.lamar.edu/Classes/CalcII/ParaArcLength.aspx):
 
-$$I_{x} = \int_0^1 (y_1 + t(y_2-y_1))^2 L dt$$
+$$dA = ds \times d = (Ld) dt$$
+
+Substitute the equations above into our original integral:
+
+$$I_{x} = L d \times \int_0^1 (y_1 + t(y_2-y_1))^2 dt$$
 
 Expand terms:
 
-$$I_{x} = \int_0^1 y_1^2 + 2y_1t(y_2-y_1) + t^2(y_2-y_1)^2 L dt$$
+$$I_{x} = Ld \times \int_0^1 y_1^2 + 2y_1t(y_2-y_1) + t^2(y_2-y_1)^2 dt$$
 
 Solving the definite integral gets us:
 
-$$I_{x} = y_1^2t \rvert_0^1 + \frac{t^2 2y_1(y_2-y_1)}{2} \rvert_0^1 + \frac{t^3 (y_2-y_1)^2}{3} \rvert_0^1$$
+$$I_{x} = Ld \times (y_1^2t \rvert_0^1 + \frac{t^2 2y_1(y_2-y_1)}{2} \rvert_0^1 + \frac{t^3 (y_2-y_1)^2}{3} \rvert_0^1)$$
 
-$$I_{x} = (y_1^2) + (y_1(y_2-y_1)) + \frac{1}{3}(y_2^2 - 2y_1y_2 + y_1^2)$$
+$$I_{x} = Ld \times ((y_1^2) + (y_1(y_2-y_1)) + \frac{1}{3}(y_2^2 - 2y_1y_2 + y_1^2))$$
 
-Simplify:
+Do some simple algebra:
 
-$$I_{x} = (y_1^2) + (y_1y_2 - y_1^2) + (\frac{1}{3}y_2^2 - \frac{2}{3}y_1y_2 + \frac{1}{3}y_1^2)$$
+$$I_{x} = Ld \times ((y_1^2) + (y_1y_2 - y_1^2) + (\frac{1}{3}y_2^2 - \frac{2}{3}y_1y_2 + \frac{1}{3}y_1^2))$$
 
-$$I_{x} = \frac{3}{3}y_1y_2 + \frac{1}{3}y_2^2 - \frac{2}{3}y_1y_2 + \frac{1}{3}y_1^2$$
+$$I_{x} = Ld \times ( \frac{3}{3}y_1y_2 + \frac{1}{3}y_2^2 - \frac{2}{3}y_1y_2 + \frac{1}{3}y_1^2)$$
 
-$$I_{x} = \frac{1}{3}y_1y_2 + \frac{1}{3}y_2^2 + \frac{1}{3}y_1^2$$
+$$I_{x} = Ld \times ( \frac{1}{3}y_1y_2 + \frac{1}{3}y_2^2 + \frac{1}{3}y_1^2)$$
 
 Finally, we arrive at the same equation as ACI 421.1R:
 
-$$I_{x} = \frac{1}{3}(y_1^2 +y_1y_2 + y_2^2 )$$
+$$I_{x} = \frac{Ld}{3}(y_1^2 +y_1y_2 + y_2^2 )$$
 
-$$I_{y} = \frac{1}{3}(x_1^2 +x_1x_2 + x_2^2 )$$
+$$I_{y} = \frac{Ld}{3}(x_1^2 +x_1x_2 + x_2^2 )$$
 
+Remember this is the contribution of a single straight segment. Sum the contribution of all segments to get $I_x$ and $I_y$.
 
-
-wthisj numerically approximates $I_x$ and $I_y$ based on ACI 421.1R formulas rather than the ACI 318. In the backend, the perimeter is discretized into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. Refer to Section 5.0 and 6.0 for more info. The user may opt to reduce the fiber size even further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
-
-
-
-
-
-
-
-TODO
-
-
-
-
-
-
-
-
+> [!NOTE]
+>
+> wthisj numerically approximates $I_x$ and $I_y$ by discretizing the perimeter into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. The default fiber size is usually accurate enough; however, users may opt to reduce the fiber size further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
 
 
 
