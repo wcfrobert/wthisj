@@ -22,7 +22,7 @@
 
 ## Introduction
 
-**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations based on the provisions and recommendations in ACI 318 and ACI 421.1R. Create a critical shear section, add loads, and visualize results in less than 3 lines of python code.
+**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations based on the provisions of ACI 318 and ACI 421.1R. Create a critical shear section, add loads, and visualize results in less than 3 lines of python code.
 
 Notable Features include:
 
@@ -197,11 +197,13 @@ In the figure below, we see two types of concrete floor systems. The one on the 
 
 <p align="center"><img src="./doc/theory1.png" width="70%"></p>
 
-It is easy to see why beam-supported slab systems have fallen out of favor. Beams and girders must be shaped with formwork, which means more carpentry work, which means more labor, higher cost, and longer construction time. On the other hand, flat plate slabs are easier to build, reduce complexity in terms of detailing, give MEP trade partners full flexibility in the ceiling space, and minimize formwork (see [flying form](https://www.concrete.org.uk/fingertips-nuggets.asp?cmd=display&id=536)). Furthermore, the shallow floor depths means more floors can fit within the same building height constraint. This is a no-brainer decision for developers. Most concrete high-rises in the US today have flat plate floor systems. 
+It is easy to see why beam-supported slab systems have fallen out of favor. Beams and girders must be shaped with formwork, which means more carpentry work, which means more labor, higher cost, and longer construction time. On the other hand, flat plate slabs are easier to build, reduce complexity in terms of detailing, give MEP trade partners full flexibility in the ceiling space, and minimize formwork (see [flying form](https://www.concrete.org.uk/fingertips-nuggets.asp?cmd=display&id=536)). Furthermore, the shallow floor depths means more floors can fit within the same building height constraint. This is a no-brainer decision for real estate developers. Most concrete high-rises in the US today have flat plate floor systems. 
 
 So what is the trade-off? The lack of supporting beams means **less redundancy** and **high shear stress** around the supporting columns. If improperly design, flat plates can fail like a pencil through paper, and if the slab fails, it's game over. The figure below is an illustration of punching shear failure. The photo on the left is a garage in the UK (Piper's Row Car Park, Wolverhampton) built in the 1960s. Needless to say, the accurate evaluation of punching shear has become critically important in the design concrete slabs.
 
 <p align="center"><img src="./doc/theory2.png" width="50%"></p>
+
+Punching shear is also relevant in the design of footings, though it's usually less critical. The punching shear design equations are one and the same, just flip the image above upside down. 
 
 ### 2.0 Punching Shear Calculation
 
@@ -296,21 +298,7 @@ Putting all the pieces together, taking note that we have 2 "webs" and 2 "flange
 
 $$J_c = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
 
-> [!IMPORTANT]
->
-> Although this property is referred to as "polar moment of inertia", you should really just think of it as a planar moment of inertia. The use of $J_c$​ to represent planar moment of inertia in concrete design is a confusing anti-pattern for three reasons:
->
-> 1. It's used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$) rather than a torsional-shear-stress equation ($\tau = Tr/J$), 
-> 2. The mathematical relationship $J = I_x + I_y$ in solid mechanics is NOT true in the formulation above. You can calculate two $J_c$ values. 
-> 3. The rules presented above becomes convoluted and ill-defined for non-orthogonal (slanted) faces.
-
-Indeed, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. In essence, we go back to first principles and just calculate the regular planar moments of inertia:
-
-$$J_{cx} = I_x = \int y^2dA$$
-
-$$J_{cy} = I_y = \int x^2dA$$
-
-Rather than calculating these integrals by hand, we can use the following handy formulas. For a shear section that is composed of $N$ straight segments, let each segment be defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth.
+Alternatively, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** presents another formulation that is slightly different but is more conservative. Here are the formulas. We will discuss $J$ in more detail in Section 5.0. 
 
 $$A_c =  \sum L d $$
 
@@ -318,7 +306,11 @@ $$J_{cx} = I_x = \sum \frac{L d}{3}(y_1^2 +y_1 y_2 + y_2^2) $$
 
 $$J_{cy} = I_y =  \sum \frac{L d}{3}(x_1^2 +x_1 x_2 + x_2^2) $$
 
-$J_{cx}$ and $J_{cy}$ calculated using the formula above is always smaller than $J_c$ by about 5% to 15%. Since $J$ is on the denominator, using the ACI 421.1R equations will always be more conservative. In effect, we are discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed) and end up just calculating the regular planar moments of inertia. Trust these formulas for now... We will discuss $J$ in more detail and derive the formulas above in Section 5.0.
+In the equations, a shear sections is composed of $N$ straight segments, each segment defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth.
+
+
+
+
 
 ### 3.0 Example
 
@@ -355,15 +347,15 @@ column1.plot_results_3D()
 
 ### 4.0 Nuances To Consider
 
-All of this makes sense in theory. In practice, the formulations above are easily strained by real design scenarios. Let's consider some of the nuances that one might encounter.
+Let's start introducing some of the nuances one may encounter in practice. 
 
 **Nuance #1: What Happens When There Is Unbalanced Moment About Both Axes?**
 
-Historically, before industry-wide adoption of FEM software, two-way slabs were designed using either the Direct Design Method (DDM), or Equivalent Frame Method (EFM), both methods required partitioning a three-dimensional slab system into series of two-dimensional frames. The entire slab design procedure back then was done one direction at a time. This is the reason why ACI 318 code is vague about bi-axial moment. With modern FEM software, it is trivial to find unbalanced moment about both axes, hence why it may seem strange to younger engineers why anyone would consider only "half" of the applied moment. 
+ACI 318 code is vague about bi-axial moment for historical reasons. Before industry-wide adoption of FEM software, two-way slabs were designed using either the Direct Design Method (DDM), or Equivalent Frame Method (EFM), both of which required partitioning a three-dimensional slab system into series of two-dimensional frames. Slabs were designed one direction at a time, tediously along every gridline... With modern FEM software, it became trivial to find unbalanced moment about both axes, hence why it may seem strange to younger engineers why anyone would consider only "half" of the applied moment. 
 
-There's [a lot of discussion](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment about both principal axes should be considered at the same time, or one axis at a time. Calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement no longer exists in the latest version of the report (ACI 421.1R-20). I don't think there is consensus yet.
+There's [a lot of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment should be considered one axis at a time, or both at the same time. A common line of argument is that calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement no longer exists in the latest version of the report (ACI 421.1R-20). 
 
-I'll leave the engineering judgement to the reader. Here's the full shear stress equation if we were to consider unbalanced moment about both axes. Notice how we now need to calculate two $J$ terms!
+I don't think there is consensus yet. I'll leave the engineering judgement to the reader. Here's the equation if we were to consider unbalanced moment about both axes.
 
 $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{\gamma_{vy} M_{sc,y} c_x}{J_{cy}}$$
 
@@ -372,44 +364,16 @@ $$v_u = \frac{V_u}{b_o d} \pm \frac{\gamma_{vx} M_{sc,x} c_y}{J_{cx}} \pm \frac{
 
 
 
-**Nuance #2: Do I Have to Calculate J For Both X and Y Axes?**
+**Nuance #2: What Happens When There Is Nearby Openings?**
 
-Yes! Despite being called a "polar moment of inertia", the $J_c$​​​ term is used like a planar moment of inertia. To calculate $J_c$ for the other orthogonal axis, simply swap the "flange" and "web" areas and follow the derivation in the previous section:
-
-$$J_{cx} = 2(\frac{d b_1^3}{12}+\frac{b_1 d^3}{12}) + 2(b_2 d) (b_1/2)^2$$
-
-$$J_{cy} = 2(\frac{d b_2^3}{12}+\frac{b_2 d^3}{12}) + 2(b_1 d) (b_2/2)^2$$
-
-The use of $J_c$ to represent planar moment of inertia in concrete design is a confusing anti-pattern. Recall from mechanics of materials that polar moment of inertia ($I_z$ or $J$) is a property associated with in-plane torsion, whereas planar moments of inertia are properties associated with out-of-plane flexure. For any cross section, there is only one possible polar MOI ($J$), but two planar MOI ($I_x$ and $I_y$). Here are some formulas to jog your memory:
-
-$\mbox{shear stress due to torsion}: \tau =Tr/J$
-
-$\mbox{normal stress due to flexure}: \sigma = My/I_x \mbox{ and } \sigma=Mx/I_y$
-
-Indeed, ACI 421.1R recommends using a slightly different formulation that differs on the safe side, and more closely resembles what we learned in mechanics of materials. We will discuss this in depth in Nuance #7 and Section 5.0. In essence, we discard the weak axis $I_y$ term from the web areas (the one where slab depth is cubed). In effect, we end up just calculating the regular planar moments of inertia.
-
-$$J_{cx} = I_x = \int y^2dA$$
-
-$$J_{cy} = I_y = \int x^2dA$$
-
-
-
-> [!NOTE]
-> wthisj uses numerical approximation to calculate $I_x$ and $I_y$ (ACI 421.1R) rather than using the ACI 318 formulas. In the backend, the perimeter is discretized into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. Refer to Section 5.0 and 6.0 for more info. The user may opt to reduce the fiber size even further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
-
-
-
-
-**Nuance #3: How Does Nearby Openings Impact Shear Stress?**
-
-According to ACI 318-19 22.6.4.3, If an opening is closer than $4h$ to the critical shear perimeter, the shear perimeter ($b_o$) must be reduced which leads to higher punching shear stress. To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration:
+According to ACI 318-19 22.6.4.3, If an opening is closer than $4h$ to the critical shear perimeter, the shear perimeter ($b_o$) must be reduced which increases punching shear stress. To consider the influence of nearby openings, connect the corners of the opening to the column centroid, the portion of the shear section enclosed are considered ineffective. This is easier to explain with an illustration:
 
 <p align="center"><img src="./doc/theory11.png" width="70%"></p>
 
 In practice, most engineers use some kind of CAD software to avoid doing the geometry puzzle. In addition to the perimeter reduction, there are two additional consequences that are not often not talked about:
 
 * The addition of openings may shift the perimeter centroid.
-* The addition of opening may rotate the principal axes. For example, the section above on the right must be rotated 28 degrees to its principal orientation - where $I_{xy}=0$ - otherwise equilibrium will not hold. We will elaborate further in Nuance #6.
+* The addition of opening may rotate the principal axes. For example, the section above on the right must be rotated 28 degrees to its principal orientation - where $I_{xy}=0$ - otherwise equilibrium will not hold. We will elaborate further in Nuance #5.
 
 > [!NOTE]
 > wthisj allows an arbitrary number of rectangular openings to be added with the `PunchingShearSection.add_opening(xo, yo, width, depth)` method. A warning will be printed to console if the openings is further than 4h away because the specified opening can be ignored. In the back end, each opening is converted into a $\theta$ deletion range. Then, using polar coordinate system, all perimeter fibers falling within the $\theta$ deletion range are removed from the model.
@@ -418,7 +382,7 @@ In practice, most engineers use some kind of CAD software to avoid doing the geo
 
 
 
-**Nuance #4: What Happens When There Is Large Overhang At Edge or Corner Columns?**
+**Nuance #3: What Happens When There Is Large Overhang At Edge or Corner Columns?**
 
 At edge or corner columns, the slab may cantilever far beyond the face of the column. At what point does it become an interior condition? According to ACI 318-19 22.6.4.1, the perimeter of the critical section shall be minimized. We will interpret this to mean that the overhang cannot provide more perimeter than if the column were on the interior. If we do the math, the limit works out to be $c_2/2 +d$. Where $d$ is the average slab depth, and $c_2$ is the column dimension parallel to the slab edge. If the slab cantilevers longer than this limit, the edge condition becomes an interior condition.
 
@@ -431,7 +395,7 @@ $$\mbox{max overhang} = c_2/2 + d$$
 
 
 
-**Nuance #5: What Happens When Shear Section Centroid is Offset From The Column Centroid?**
+**Nuance #4: What Happens When Shear Section Centroid is Offset From The Column Centroid?**
 
 For an interior condition, the centroid of the critical shear section most likely coincides with the column centroid. However, at edge and corner columns, there will be an offset which is illustrated in the figure below.
 
@@ -464,19 +428,21 @@ If you are doing punching shear calculations by hand, I highly recommend drawing
 
 
 
-**Nuance #6: What Happens At Corner Columns With Skewed Principal Axes?**
+**Nuance #5: What Happens At Corner Columns With Skewed Principal Axes?**
 
 In order for the flexural formulas - and by extension the ACI 318 punching formula - to be applicable, the sections MUST be in its principal orientation. An alternative perspective is to say that the applied moment vector **M** must be resolved into components of the principal axes. 
 
 $$\sigma =M_xc_y/I_x +M_y c_x / I_y \Rightarrow \mbox{ this formula is only applicable if } I_{xy}=0$$
 
-For most symmetrical geometries, the principal axes is simply the horizontal (X) and vertical (Y) axes and no rotation is needed. However, there are sections - such as an L shape - that have slanted principal axes. This is sometimes referred to as **unsymmetric bending**. In short, a section under unsymmetric bending can only guarantee equilibrium when the bi-axial moment is applied with respect to the principal axes. 
+For most symmetrical geometries, the principal axes is simply the horizontal (X) and vertical (Y) axes and no rotation is needed. However, there are sections - such as an L shape - that have slanted principal axes. This is sometimes referred to as **unsymmetric bending**. In short, unsymmetric bending can only guarantee equilibrium when the bi-axial moment is applied with respect to the principal axes. 
 
 In the figure below, I have a corner column subjected to the exact same loading condition. 
 
 <p align="center"><img src="./doc/theory14.png" width="100%"></p>
 
-On the left, we apply moment about the non-principal Y axes. Notice how the entire right face of the column has the same stress. This makes sense as those fibers have the same $c_x$ distance. Unfortunately, the resulting stress field is NOT in equilibrium. On the right, we first resolve the moment into components of the principal axes $(x_p, y_p)$, and then apply the punching shear stress formula about these rotated local axes. Notice how much higher the the shear stress is!
+On the left, we apply moment about the non-principal Y axes. Notice how the entire right face of the column has the same stress. This makes sense as those fibers have the same $c_x$ distance. Unfortunately, the resulting stress field is NOT in equilibrium. 
+
+On the right, we first resolve the moment into components of the principal axes $(x_p, y_p)$, and then apply the punching shear stress formula about these rotated local axes. Notice how much higher the the shear stress is!
 
 To check if a critical shear section is in its principal orientation, first calculate its product moment of inertia, then calculate the necessary rotation required to get to the principal orientation:
 
@@ -487,19 +453,53 @@ $$\theta_p = \frac{1}{2} \times \arctan{(\frac{2I_{xy}}{I_x - I_y})}$$
 A shear section is in its principal orientation if $I_{xy}$ is equal to 0, in which case $\theta_p$ will be 0 rad as well.
 
 > [!NOTE]
-> wthisj will automatically rotate local axes to principal orientation. Simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is set to True by default). In the backend, the entire geometry is rotated, rather than the moment vector, because the former is easier to implement programmatically.
+> wthisj will automatically rotate a section's local axes to the principal orientation. Simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is set to True by default). In the backend, the entire geometry is rotated, rather than the moment vector, because the former is easier to implement programmatically.
 
 
 
-**Nuance #7: What Happens When We Add Stud Rails?**
+**Nuance #6: What Happens When We Add Stud Rails?**
 
-The addition of shear reinforcements (stud rails) drastically increases a section's shear capacity. However, in addition to verifying the adequacy of the shear perimeter we've talked about thus far, we must also check a second unreinforced perimeter in the shape of a polygon. See figure below for an illustration.
+The addition of shear reinforcements (stud rails) drastically increases a section's shear capacity. However, we now need to verify the adequacy of two critical shear sections: (1) The inner reinforced shear perimeter, and (2) the outer unreinforced perimeter in the shape of a polygon. See figure below for an illustration.
 
-<p align="center"><img src="./doc/theory15.png" width="100%"></p>
+<p align="center"><img src="./doc/theory15.png" width="80%"></p>
 
-This brings us to some very important questions. How do we calculate $J_c$ for a slanted surface? Is it a "flange" or a "web" area? Do I include $I_x$, $I_y$, or $Ad^2$? What if there are openings? What if I need to rotate the geometry first to its principal orientation? The complexity can get out-of-hand quickly and fall outside of what's reasonable to do by hand. Hence why I made this python package.
+> [!NOTE]
+>
+> To create a polygonal shear perimeter, simply create a `PunchingShearSection()` object and provide a non-zero value to the  `studrail_length` argument. Note you do not have to specify stud spacings, number of rails per face, etc. Wthisj does not calculate concrete shear capacities. All we care about is establishing the polygonal shape. 
 
 
+
+### 5.0 What The Heck is J?
+
+ACI-318 defines the parameter $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is somewhat misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, let's go back to first principles. Recall from mechanics of materials some key equations:
+
+$$\mbox{planar moments of inertia: } I_x=\int y^2dA \mbox{ and } I_y = \int x^2 dA$$
+
+$$\mbox{polar moment of inertia: } J = I_x + I_y$$
+
+$$\mbox{normal stress due to flexure: } \sigma = Mc/I$$
+
+$$\mbox{shear stress due to torsion: } \tau= Tr/J$$
+
+For any cross section, there can only be one polar moment of inertia ($J$) - which is used to calculate shear stress due to in-plane torsion (usually for circular shafts). On the other hand, a section can have two planar moments of inertia ($I_x$ and $I_y$) - which are used to calculate normal stress due to out-of-plane flexure.
+
+The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is applied out-of-plane and definitely not a torsion, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but is ultimately an confusing anti pattern. 
+
+The $J_c$ parameter is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Furthermore, even though it's a polar moment of inertia, you can technically calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does NOT hold for the ACI 318 definition of $J_c$. Lastly, the ACI 318 formulation of $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
+
+Indeed, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. Let a shear section be composed of $N$ straight segments, each segment is defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth. We can calculate $J$ as follows:
+
+$$J_{cx} = I_x = \sum \frac{L d}{3}(y_1^2 +y_1 y_2 + y_2^2) $$
+
+$$J_{cy} = I_y =  \sum \frac{L d}{3}(x_1^2 +x_1 x_2 + x_2^2) $$
+
+$J_{cx}$ and $J_{cy}$ calculated using the formula above is always smaller than $J_c$ by about 5% to 15%. Since $J$ is on the denominator, using the ACI 421.1R equations will always be more conservative. In effect, we are discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed) and end up just calculating the regular planar moments of inertia. 
+
+But where do these formulas come from? In essence, we go back to first principles and just calculate the regular planar moments of inertia:
+
+$$J_{cx} = I_x = \int y^2dA$$
+
+$$J_{cy} = I_y = \int x^2dA$$
 
 The critical shear section can be decomposed into series of straight segments. Each segment can be represented by a straight line from $(x_1, y_1)$ to $(x_2, y_2)$, where the coordinates are with respect to the critical section centroid.
 
@@ -547,12 +547,7 @@ From here,
 
 
 
-
-
-
-
-### 5.0 What The Heck is J?
-
+wthisj numerically approximates $I_x$ and $I_y$ based on ACI 421.1R formulas rather than the ACI 318. In the backend, the perimeter is discretized into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. Refer to Section 5.0 and 6.0 for more info. The user may opt to reduce the fiber size even further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
 
 
 
@@ -560,24 +555,7 @@ From here,
 
 
 
-
-
-
-
-
-
-
-
-
-### 6.0 Numerical Approximation with wthisj
-
-
-
-
-
-
-
-
+TODO
 
 
 
