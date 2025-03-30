@@ -442,15 +442,7 @@ In the figure below, I have a corner column subjected to the exact same loading 
 
 On the left, we apply moment about the non-principal Y axes. Notice how the entire right face of the column has the same stress. This makes sense as those fibers have the same $c_x$ distance. Unfortunately, the resulting stress field is NOT in equilibrium. 
 
-On the right, we first resolve the moment into components of the principal axes $(x_p, y_p)$, and then apply the punching shear stress formula about these rotated local axes. Notice how much higher the the shear stress is!
-
-To check if a critical shear section is in its principal orientation, first calculate its product moment of inertia, then calculate the necessary rotation required to get to the principal orientation:
-
-$$I_{xy}=\int xy dA = d\sum[\frac{L}{6}(2x_1y_1 +x_1y_2 + x_2y_1 + 2x_2y_2)]$$
-
-$$\theta_p = \frac{1}{2} \times \arctan{(\frac{2I_{xy}}{I_x - I_y})}$$
-
-A shear section is in its principal orientation if $I_{xy}$ is equal to 0, in which case $\theta_p$ will be 0 rad as well.
+On the right, we first resolve the moment into components of the principal axes $(x_p, y_p)$, and then apply the punching shear stress formula about these rotated local axes. Notice how much higher the the shear stress is.
 
 > [!NOTE]
 > wthisj will automatically rotate a section's local axes to the principal orientation. Simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is set to True by default). In the backend, the entire geometry is rotated, rather than the moment vector, because the former is easier to implement programmatically.
@@ -471,9 +463,11 @@ The addition of shear reinforcements (stud rails) drastically increases a sectio
 
 ### 5.0 What The Heck is J?
 
-ACI-318 defines the parameter $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is somewhat misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, let's go back to first principles. Recall from mechanics of materials some key equations:
+ACI-318 defines the parameter $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, let's go back to first principles. Recall from mechanics of materials a few key equations:
 
-$$\mbox{planar moments of inertia: } I_x=\int y^2dA \mbox{ and } I_y = \int x^2 dA$$
+$$\mbox{planar moments of inertia about X axis: } I_x=\int y^2dA$$
+
+$$\mbox{planar moments of inertia about Y axis: }  I_y = \int x^2 dA$$
 
 $$\mbox{polar moment of inertia: } J = I_x + I_y$$
 
@@ -483,67 +477,79 @@ $$\mbox{shear stress due to torsion: } \tau= Tr/J$$
 
 For any cross section, there can only be one polar moment of inertia ($J$) - which is used to calculate shear stress due to in-plane torsion (usually for circular shafts). On the other hand, a section can have two planar moments of inertia ($I_x$ and $I_y$) - which are used to calculate normal stress due to out-of-plane flexure.
 
-The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is applied out-of-plane and definitely not a torsion, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but is ultimately an confusing anti pattern. 
+The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is not a torsion because it's applied out-of-plane, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but ultimately became an confusing anti pattern. $J_c$ is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Despite being a polar moment of inertia, you can calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does NOT hold. Lastly, $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
 
-The $J_c$ parameter is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Furthermore, even though it's a polar moment of inertia, you can technically calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does NOT hold for the ACI 318 definition of $J_c$. Lastly, the ACI 318 formulation of $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
+Due to these drawbacks, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. The recommendation is basically: **forget about $J_c$, just calculate $I_x$ and $I_y$​.** Recall from first principles the definition of planar moments of inertia:
 
-Indeed, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. Let a shear section be composed of $N$ straight segments, each segment is defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth. We can calculate $J$ as follows:
+$$I_x = \int y^2dA \approx J_{cx}$$
 
-$$J_{cx} = I_x = \sum \frac{L d}{3}(y_1^2 +y_1 y_2 + y_2^2) $$
+$$I_y = \int x^2dA \approx J_{cy}$$
 
-$$J_{cy} = I_y =  \sum \frac{L d}{3}(x_1^2 +x_1 x_2 + x_2^2) $$
+Rather than calculating the integral by hand, we can use the handy formulas below. Let a shear section be composed of $N$ straight segments, each segment is defined by a start node $(x_1,y_1)$ and end node $(x_2, y_2)$ where the coordinates are relative to the shear section centroid; let $L$ be the length of each segment, and let $d$ be the slab depth. We can calculate $J$ as follows:
 
-$J_{cx}$ and $J_{cy}$ calculated using the formula above is always smaller than $J_c$ by about 5% to 15%. Since $J$ is on the denominator, using the ACI 421.1R equations will always be more conservative. In effect, we are discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed) and end up just calculating the regular planar moments of inertia. 
+$$I_x = \sum \frac{L d}{3}(y_1^2 +y_1 y_2 + y_2^2) $$
 
-But where do these formulas come from? In essence, we go back to first principles and just calculate the regular planar moments of inertia:
+$$I_y =  \sum \frac{L d}{3}(x_1^2 +x_1 x_2 + x_2^2) $$
 
-$$J_{cx} = I_x = \int y^2dA$$
+> [!NOTE]
+>
+> It turns out $I_{x}$ and $I_{y}$ approximates $J_{cx}$ and $J_{cy}$ very well. The former is usually around 95% of the latter, and since $J$ is on the denominator, using the ACI 421.1R equations will always be more conservative. We are effectively discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed).
 
-$$J_{cy} = I_y = \int x^2dA$$
-
-The critical shear section can be decomposed into series of straight segments. Each segment can be represented by a straight line from $(x_1, y_1)$ to $(x_2, y_2)$, where the coordinates are with respect to the critical section centroid.
+Let's derive the equation above. Most critical shear section can be decomposed into series of straight segments. Each segment can be represented by a straight line from $(x_1, y_1)$ to $(x_2, y_2)$, where the coordinates are with respect to the critical section centroid.
 
 <p align="center"><img src="./doc/theory16.png" width="50%"></p>
 
-If the segments are purely vertical or horizontal, then we can take advantage of the [parallel axis theorem](https://en.wikipedia.org/wiki/Parallel_axis_theorem#Second_moment_of_area) to calculate the moments of inertia. 
-
-But it gets a little more complicated when diagonals are present. To get the right answer, we will need to calculate and sum up the [line integral](https://tutorial.math.lamar.edu/classes/calciii/LineIntegralsPtI.aspx) of every segment of the section.
+If the segments are purely vertical or horizontal, then we can take advantage of the [parallel axis theorem](https://en.wikipedia.org/wiki/Parallel_axis_theorem#Second_moment_of_area) to calculate the moments of inertia without solving any integrals. But it gets a little more complicated when diagonals are present. To get the right answer, we will need calculate the [line integral](https://tutorial.math.lamar.edu/classes/calciii/LineIntegralsPtI.aspx) of every segment and sum them up.
 
 $$I_x = \sum \int_c y^2ds$$
 
 $$I_y = \sum \int_c x^2 ds$$
 
-To start, lets parameterize the straight line segment starting at $(x_1, y_1)$ and ending at $(x_2, y_2)$:
+Recall that a straight line segment starting at $(x_1, y_1)$ and ending at $(x_2, y_2)$ can be [parameterized](https://tutorial.math.lamar.edu/Classes/CalcII/ParametricEqn.aspx) as:
 
-$$x = (1-t) x_1 + tx_2 \qquad \mbox{where} \qquad 0\leq t \leq 1$$
+$$x = x_1 + t(x_2-x_1) \qquad \mbox{where} \qquad 0\leq t \leq 1$$
 
-$$y = (1-t) y_1 + ty_2 \qquad \mbox{where} \qquad 0\leq t \leq 1$$
+$$y = y_1 + t(y_2 - y_1) \qquad \mbox{where} \qquad 0\leq t \leq 1$$
 
-We can simplify the integrals above if we let the length of the straight segment be equal to $L$, then the line integrals become
+For a straight segment, the differential [arch length](https://tutorial.math.lamar.edu/Classes/CalcII/ParaArcLength.aspx) can be simplified as follows:
 
-$$I_{xi} = \int_0^1 ((1-t) y_1 + ty_2)^2 Ldt$$
+$$ds = \sqrt{(\frac{dx}{dt})^2 + (\frac{dy}{dt})^2} dt$$
 
-$$I_{yi} = \int_0^1 ((1-t) x_1 + tx_2)^2 Ldt$$
+$$\frac{dx}{dt} = (x_2-x_1)$$
 
-Now the line integral becomes one that we can easily solve.
+$$\frac{dy}{dt} = (y_2-y_1)$$
 
-$$I_{xi} = L \int_0^1 (y_1 -y_1t +y_2t)^2 dt$$
+$$ds = \sqrt{(x_2-x_1)^2 + (y_2-y_1)^2} dt$$
 
-$$I_{xi} = L \int_0^1 (y_1^2 - y_1^2t + y_1y_2t - y_1^2t + y_1^2t^2 -y_1y_2t^2)^2 dt$$
+$$ds = L dt$$
 
+For brevity, I will derive the formula for $I_x$ only. The derivation for $I_y$ is exactly the same just with x and y swapped. Substitute the equations above into our integral:
 
+$$I_{x} = \int_0^1 (y_1 + t(y_2-y_1))^2 L dt$$
 
-Recall that equation for moment of inertia.
+Expand terms:
 
-$$J_{cx} = I_x = \int y^2dA$$
+$$I_{x} = \int_0^1 y_1^2 + 2y_1t(y_2-y_1) + t^2(y_2-y_1)^2 L dt$$
 
-$$J_{cy} = I_y = \int x^2dA$$
+Solving the definite integral gets us:
 
-If the 
+$$I_{x} = y_1^2t \rvert_0^1 + \frac{t^2 2y_1(y_2-y_1)}{2} \rvert_0^1 + \frac{t^3 (y_2-y_1)^2}{3} \rvert_0^1$$
 
-From here, 
+$$I_{x} = (y_1^2) + (y_1(y_2-y_1)) + \frac{1}{3}(y_2^2 - 2y_1y_2 + y_1^2)$$
 
+Simplify:
 
+$$I_{x} = (y_1^2) + (y_1y_2 - y_1^2) + (\frac{1}{3}y_2^2 - \frac{2}{3}y_1y_2 + \frac{1}{3}y_1^2)$$
+
+$$I_{x} = \frac{3}{3}y_1y_2 + \frac{1}{3}y_2^2 - \frac{2}{3}y_1y_2 + \frac{1}{3}y_1^2$$
+
+$$I_{x} = \frac{1}{3}y_1y_2 + \frac{1}{3}y_2^2 + \frac{1}{3}y_1^2$$
+
+Finally, we arrive at the same equation as ACI 421.1R:
+
+$$I_{x} = \frac{1}{3}(y_1^2 +y_1y_2 + y_2^2 )$$
+
+$$I_{y} = \frac{1}{3}(x_1^2 +x_1x_2 + x_2^2 )$$
 
 
 
