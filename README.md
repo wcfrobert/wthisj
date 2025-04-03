@@ -22,9 +22,7 @@
 
 ## Introduction
 
-**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations based on the provisions of ACI 318 and ACI 421.1R. Create a critical shear section, add loads, and visualize results in less than 3 lines of python code.
-
-Notable Features include:
+**wthisj** (what the heck is j?) is a python program that that performs punching shear calculations per ACI 318 and ACI 421.1R. Notable Features include:
 
 * Supports all column conditions (interior, edge, and corner)
 * Easily add stud rails (i.e. polygonal shear perimeters)
@@ -353,7 +351,7 @@ Let's start introducing some of the nuances one may encounter in practice.
 
 ACI 318 code is vague about bi-axial moment for historical reasons. Before industry-wide adoption of FEM software, two-way slabs were designed using either the Direct Design Method (DDM), or Equivalent Frame Method (EFM), both of which required partitioning a three-dimensional slab system into series of two-dimensional frames. Slabs were designed one direction at a time, tediously along every gridline... With modern FEM software, it became trivial to find unbalanced moment about both axes, hence why it may seem strange to younger engineers why anyone would consider only "half" of the applied moment. 
 
-There's [a lot of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment should be considered one axis at a time, or both at the same time. A common line of argument is that calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement no longer exists in the latest version of the report (ACI 421.1R-20). 
+There's [a lot of debate](https://www.eng-tips.com/threads/punching-shear-aci-calculation-method.392228/) on whether unbalanced moment should be considered one axis at a time, or both at the same time. A common line of argument is that calculating stress due to bi-axial moment will result in a maximum stress at a point, whereas all the experimental tests and thus code-based equations are based on the average stress across an entire face. According to the ACI committee 421 report in 1999 (ACI 421.1R-99), an overstress of 15% is assumed to be acceptable as stress is expected to distribute away from the highly stressed corners of the critical perimeter. However, this statement no longer exists in the latest version of the report (ACI 421.1R-20). I would personally be as conservative as possible when it comes to punching shear.
 
 I don't think there is consensus yet. I'll leave the engineering judgement to the reader. Here's the equation if we were to consider unbalanced moment about both axes.
 
@@ -422,7 +420,7 @@ If you are doing punching shear calculations by hand, I highly recommend drawing
 <p align="center"><img src="./doc/theory13.png" width="50%"></p>
 
 > [!NOTE]
-> Wthisj expects the applied forces `Vz, Mx, My` provided by the user to be already adjusted! Whatever load patterns you have, please perform the necessary calculations to get the forces with respect to the shear section centroid. To enable eccentric moment adjustment, simply set the `consider_ecc` argument in `PunchingShearSection.solve()` to True. Note this argument is set to False by default because it can occasionally give weird results especially at corner columns or perimeter with stud rails.
+> Wthisj expects the applied forces `Vz, Mx, My` provided by the user to be already adjusted! Whatever load patterns you have, please perform the necessary calculations to get the forces with respect to the shear section centroid. To enable eccentric moment adjustment, simply set the `consider_ecc` argument in `PunchingShearSection.solve()` to True. Note this argument is set to False by default because it can occasionally give unexpected results at corner columns or perimeter with stud rails, and it is more conservative to ignore it.
 
 
 
@@ -463,7 +461,9 @@ The addition of shear reinforcements (stud rails) drastically increases a sectio
 
 ### 5.0 What The Heck is J?
 
-ACI-318 defines $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, let's go back to first principles. Recall from mechanics of materials some key equations:
+The parameter $J_c$ was first introduced in a paper by [Di Stasio and Van Buren (1960)](https://www.scribd.com/document/703275022/Transfer-of-Bending-Moment-Between-Flat-Plate-Floor-and-Column), the proposed analytical model is known as the **eccentric shear stress model**. The original formula had more factors in it but was subsequently simplified in ACI 318-71. The formula for punching shear has remained essentially unchanged since.
+
+ACI 318-19 defines $J_c$ as a property "analogous to polar moment of inertia". However, this terminology is misleading. It is perhaps better to think of $J_c$ as purely an empirical constant rather than something theoretically rigorous. To understand why, recall from mechanics of materials some key equations:
 
 $$\mbox{planar moments of inertia about X axis: } I_x=\int y^2dA$$
 
@@ -477,9 +477,9 @@ $$\mbox{shear stress due to torsion: } \tau= Tr/J$$
 
 For any cross section, there can only be one polar moment of inertia ($J$) - which is used to calculate shear stress due to in-plane torsion (usually for circular shafts). On the other hand, a section can have two planar moments of inertia ($I_x$ and $I_y$) - which are used to calculate normal stress due to out-of-plane flexure.
 
-The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is not a torsion because it's applied out-of-plane, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but ultimately became an confusing anti pattern. $J_c$ is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Despite being a polar moment of inertia, you can calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does not hold. Lastly, $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
+The parameter $J_c$ was born out of an attempt to fit our 3-D punching shear problem into equations that were meant for 2-D cross sections. We care about shear stress, but unbalanced moment is not a torsion because it's applied out-of-plane, so do we use the flexural normal stress equation instead? The end result is a concoction that rhymes with all of the above, but became an confusing anti pattern. $J_c$ is suggestive of polar moment of inertia, but is used in a formula that resembles the flexural-normal-stress equation ($\sigma=Mc/I$). Despite being a polar moment of inertia, you can calculate two $J_c$ values ($J_{cx}$, $J_{cy}$), which means the mathematical relationship: $J = I_x + I_y$ does not hold. Lastly, $J_c$ becomes ill-defined for non-orthogonal (diagonal) faces of a polygonal shear section.
 
-Because of these drawbacks, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. The recommendation is basically this: **forget about $J_c$, just calculate $I_x$ and $I_y$​.** 
+Because of these drawbacks, **ACI 421.1R - Guide for Shear Reinforcement For Slabs** recommends using a slightly different formulation. The recommendation is basically to **forget about $J_c$, just calculate $I_x$ and $I_y$​.** 
 
 $$I_x = \int y^2dA \approx J_{cx}$$
 
@@ -801,8 +801,10 @@ column1.rotate(angle=45)
 * Units should be in **(KIPS, IN)**. 
 * wthisj calculates $J_c$ using the recommendations in ACI 421.1R which differs (on the safe side) compared to ACI 318. Refer to section 5 of the Theoretical Background for more info.
 * wthisj works by discretizing the critical shear perimeter into tiny **0.5 inch fibers**, each fiber has an infinitesimal area (dA) which is then summed to approximate $J_c$ and other parameters. The default fiber size is usually accurate enough; however, users may opt to reduce the fiber size further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
-* wthisj will only calculate shear stress **demand**. Please calculate concrete shear **capacity** yourself. It should be noted that wthisj calculates demand using a very specific methodology applicable to the US design practice only. Other countries have their own methods of calculating punching shear stress (e.g. EN 1992, fib Model Code 2010). Do NOT mix-and-match building codes when comparing demands to capacity. 
-* This is NOT enterprise-grade software. Users assume full responsibility for verifying results and making sure things make sense.
+* wthisj will only calculate shear stress **demand**. Please calculate concrete shear **capacity** yourself. It should also be noted that wthisj calculates demand using a very specific methodology applicable to the US design practice. Other countries have their own methods of calculating punching shear stress (e.g. EN 1992, fib Model Code 2010). Do NOT mix-and-match building codes when comparing demands to capacity. 
+* This is not enterprise software. Please do NOT use it for work. Users assume full risk and responsibility for verifying that the results are accurate.
+
+
 
 
 ## License
