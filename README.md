@@ -268,7 +268,8 @@ The parameter c is the orthogonal distance from the neutral axis to any fiber in
 $$x_c = \frac{\sum xA}{\sum A} \mbox{ and } y_c = \frac{\sum yA}{\sum A}$$
 
 
-<p align="center"><img src="https://github.com/wcfrobert/wthisj/blob/master/doc/theory8.png" width="70%"></p>
+
+<p align="center"><img src="./doc/theory8.png" width="60%"></p>
 
 
 
