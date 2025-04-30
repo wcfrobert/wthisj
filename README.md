@@ -256,6 +256,8 @@ $b_1$ is the critical perimeter dimension parallel to the slab span, whereas $b_
 
 <p align="center"><img src="./doc/theory6.png" width="100%"></p>
 
+
+
 **Distance From Shear Section Centroid ($c$)**
 
 The parameter c is the orthogonal distance from the neutral axis to any fiber in the perimeter. There are two important nuances worth highlighting here:
@@ -266,8 +268,7 @@ The parameter c is the orthogonal distance from the neutral axis to any fiber in
 $$x_c = \frac{\sum xA}{\sum A} \mbox{ and } y_c = \frac{\sum yA}{\sum A}$$
 
 
-
-<p align="center"><img src="./doc/theory8.png" width="60%"></p>
+<p align="center"><img src="./doc/theory8.png" width="70%"></p>
 
 
 
