@@ -3,7 +3,6 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 
-
 [project]
 name = "wthisj"
 version = "0.2.0"
@@ -18,6 +17,21 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.0",
+    "matplotlib>=3.0",
+    "plotly>=5.0",
+]
+keywords = [
+    "structural engineering",
+    "concrete",
+    "reinforced concrete",
+    "punching shear",
+    "two way shear",
+    "slab design"
+]
+
 
 [project.urls]
 "Homepage" = "https://github.com/wcfrobert/wthisj"
