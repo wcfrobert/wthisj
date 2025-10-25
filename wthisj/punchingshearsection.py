@@ -761,7 +761,8 @@ class PunchingShearSection:
             self.theta_p = 0
         else:
             if math.isclose(self.Ix, self.Iy, abs_tol=1e-6):
-                self.theta_p = 45
+                #self.theta_p = 45
+                self.theta_p = (  math.atan((self.Ixy)/((self.Ix-self.Iy)/2)) / 2) * 180 / math.pi
             else:
                 self.theta_p = (  math.atan((self.Ixy)/((self.Ix-self.Iy)/2)) / 2) * 180 / math.pi
     
@@ -942,7 +943,7 @@ class PunchingShearSection:
     
 
     def solve(self, Vz, Mx, My, gamma_vx="auto", gamma_vy="auto", 
-              consider_ecc=False, auto_rotate=True, verbose=True):
+              consider_ecc=True, auto_rotate=True, verbose=True):
         """
         Calculate shear stress at every point along the column perimeter. (ALL UNIT IN KIP, IN)
         
@@ -1001,11 +1002,9 @@ class PunchingShearSection:
         
         (2) Additional moment due to Pe:
             Most engineers obtain the applied shear (V) and unbalanced moment (Mx, My) using FEM software that
-            reports column reactions. The problem is the column centroid does NOT coincide with the perimeter
-            centroid in edge/corner conditions. I am not convinced anyone actually does this adjustment in practice,
-            but it is described in detail in ACI 421.1R-20 and I think it makes sense.
+            reports stress resultant at the column centroid. The problem is the column centroid doesn't always 
+            coincide with the shear perimeter centroid.
             
-        
         (3) Notes about gamma_v:
             Unbalanced moment in the slab is transferred to the supporting columns in two ways:
                 1. Flexure within a slab "transfer width" (GAMMA_F)
@@ -1060,7 +1059,7 @@ class PunchingShearSection:
         
         # warning if P is positive
         if Vz > 0:
-            print("WARNING: P is positive indicating uplift.")
+            print("WARNING: P is positive which indicates uplift. Is this what you are expecting?")
         
         # calculate gamma_v
         lx = max([xi for xi in self.perimeter["x_centroid"]]) - min([xi for xi in self.perimeter["x_centroid"]])
@@ -1117,8 +1116,8 @@ class PunchingShearSection:
         
         # calculate Pe moment if applicable
         if consider_ecc:
-            Pex = Vz * self.x_centroid
-            Pey = - Vz * self.y_centroid # i think there is a right-hand rule flip here
+            Pex = - Vz * self.x_centroid # i think there is a right-hand rule flip here
+            Pey = Vz * self.y_centroid 
         else:
             Pex = 0
             Pey = 0
