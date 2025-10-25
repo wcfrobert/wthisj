@@ -170,7 +170,7 @@ pip install wthisj
 
 ## Examples
 
-<u>Example #1 - Interior Condition</u>
+**Example #1 - Interior Condition**
 
 Here's a 24" x 24" interior column supporting a slab with 12" effective depth, subjected to 100 kips of shear, and 400 kip.in of unbalanced moment in the X-axis. 
 
@@ -196,8 +196,7 @@ fig3 = shear_section.plot_results_3D()
 </div>
 
 
-
-<u>Example #2 - Edge Condition</u>
+**Example #2 - Edge Condition**
 
 Here's a 24" x 24" column at the edge of the slab with a 6" overhang beyond the column face. It is subjected to 100 kips of shear, and 400 kip.in of Y-axis unbalanced moment. 
 
@@ -220,8 +219,7 @@ fig = shear_section.plot_results()
 </div>
 
 
-
-<u>Example #3 - Corner Condition w/ Principal Axes Rotation</u>
+**Example #3 - Corner Condition w/ Principal Axes Rotation**
 
 Here's a 24" x 24" column at a corner condition with 6" overhang beyond the column face. It is subjected to 100 kips of shear, and 400 kip.in of unbalanced moment in both the X and Y-axis. 
 
@@ -245,8 +243,7 @@ fig = shear_section.plot_results()
 <div align="center">
   <img src="https://github.com/wcfrobert/wthisj/blob/master/doc/example3.png?raw=true" alt="fig" style="width: 70%;" />
 </div>
-
-<u>Example #4 - Openings</u>
+**Example #4 - Openings**
 
 Let's repeat example #1, but this time, add an 12" x 24" opening 48 inches away to the right (measured from face of column to edge of opening).
 
@@ -275,7 +272,7 @@ fig = shear_section.plot_results()
 
 
 
-<u>Example #5 - Polygonal Shear Perimeter (Studrails)</u>
+**Example #5 - Polygonal Shear Perimeter (Stud Rails)**
 
 Repeat example #2, but this time, add 48" long stud rails on all three sides to create a polygonal shear section.
 
@@ -302,12 +299,13 @@ fig = shear_section.plot_results()
 </div>
 
 
-<u>Example #6 - Centroid Offset Moment Adjustment</u>
+**Example #6 - Centroid Offset Moment Adjustment**
 
-Repeat example #2, but this time, enable moment adjustment due to eccentricity. This adjustment is explained in detail the theoretical background and in ACI 421.1R. In short, the shear section centroid may be misaligned with the column centroid which can generate addition moment.
+Repeat example #2, but this time, disable moment adjustment due to eccentricity. This adjustment is explained in detail the theoretical background and in ACI 421.1R. In short, the shear section centroid may be misaligned with the column centroid which can generate addition moment.
+
+In some case, the user may be specifying the adjusted moment already, in which case please set `consider_ecc` to False
 
 * This feature is enabled by default. 
-* In some case, the user may be specifying the adjusted moment already, in which case please set `consider_ecc` to False
 * This additional moment can be huge when stud rails are provided...
 
 ```python
@@ -325,8 +323,7 @@ fig = shear_section.plot_results()
 </div>
 
 
-
-<u>Example #7 - Fully Custom Shear Perimeter</u>
+**Example #7 - Fully Custom Shear Perimeter**
 
 You can also draw a highly customized shear perimeter. Here's a triangular one where one of the sides have a different depth than the other two.
 
@@ -435,9 +432,21 @@ column1 = wthisj.PunchingShearSection(col_width = 24,
 
 
 
+> [!NOTE]
+> wthisj numerically approximates $I_x$ and $I_y$ by discretizing the perimeter into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. The default fiber size is usually accurate enough; however, users may opt to reduce the fiber size further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
+
+
+
+> [!NOTE]
+> If a `PunchingShearSection()` object has a large enough `overhang_x` or `overhang_y`, it will be automatically converted to an interior condition. The limit is explained in the theoretical background section.
+
+
+
+
+
 ### 2.0 Add Openings
 
-**`PunchingShearSection.add_opening(xo, yo, width, depth)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. This method modifies the PunchingShearSection object internally and does not return anything.
+**`PunchingShearSection.add_opening(xo, yo, width, depth)`** - Add a rectangular opening nearby. The column center is always located at (0,0). Specify bottom left corner of opening as well as opening size. You can add an arbitrary number of openings. A warning will be printed to console if the openings is further than 4h away because the specified opening can be ignored. This method modifies the PunchingShearSection object internally and does not return anything.
 
 * xo: float
   * x-offset from column center (0,0) to the bottom left corner of opening
@@ -578,7 +587,7 @@ column1.add_perimeter(start=[12,15], end=[12,-15], depth=6)
 column1.add_perimeter(start=[12,-15], end=[-15,-15], depth=12)
 ```
 
-**`PunchingShearSection.rotate(angle)`** - Rotate the section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info. This method modifies the PunchingShearSection object internally and does not return anything.
+**`PunchingShearSection.rotate(angle)`** - Rotate the section by a specified angle. This is an advanced feature not needed in most cases because the `auto_rotate` argument in `.solve()` is set to True by default. In other words, sections will automatically be rotated to its principal orientation. Please note equilibrium is only maintained for sections in its principal orientation. Superposition of stress due to bi-axial moment is only valid when Ixy = 0. Refer to the theoretical background section for more info. This method modifies the PunchingShearSection object internally and does not return anything. In the backend, the entire geometry is rotated, rather than the moment vector, because the former is easier to implement.
 
 * angle: float
   * rotate shear perimeter by a specified **DEGREE** measured counter clockwise from the +X axis.
@@ -592,6 +601,8 @@ column1.rotate(angle=45)
 
 
 
+
+
 ## Assumptions and Limitations
 
 * Units should be in **(KIPS, IN)**. 
@@ -599,41 +610,6 @@ column1.rotate(angle=45)
 * wthisj works by discretizing the critical shear perimeter into tiny **0.5 inch fibers**, each fiber has an infinitesimal area (dA) which is then summed to approximate $J_c$ and other parameters. The default fiber size is usually accurate enough; however, users may opt to reduce the fiber size further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
 * wthisj will only calculate shear stress **demand**. Please calculate concrete shear **capacity** yourself. It should also be noted that wthisj calculates demand using a very specific methodology applicable to the US design practice. Other countries have their own methods of calculating punching shear stress (e.g. EN 1992, fib Model Code 2010). Do NOT mix-and-match building codes when comparing demands to capacity. 
 * This is not enterprise software. Please do NOT use it for work. Users assume full risk and responsibility for verifying that the results are accurate.
-
-
-
-
-
-> [!NOTE]
-> wthisj will calculate shear stress using the above formula. To consider unbalanced moment one axis at a time, you can simply set one of the moment arguments (`Mx, My`) to zero when running `PunchingShearSection.solve()`
-
-> [!NOTE]
-> wthisj allows an arbitrary number of rectangular openings to be added with the `PunchingShearSection.add_opening(xo, yo, width, depth)` method. A warning will be printed to console if the openings is further than 4h away because the specified opening can be ignored. In the back end, each opening is converted into a $\theta$ deletion range. Then, using polar coordinate system, all perimeter fibers falling within the $\theta$ deletion range are removed from the model.
-
-> [!NOTE]
-> wthisj implements the above logic automatically. If a `PunchingShearSection()` object with edge or corner condition is initialized with a large enough `overhang_x` or `overhang_y`, it will be automatically converted to an interior condition.
-
-> [!NOTE]
-> Wthisj expects the applied forces `Vz, Mx, My` provided by the user to be already adjusted! Whatever load patterns you have, please perform the necessary calculations to get the forces with respect to the shear section centroid. To enable eccentric moment adjustment, simply set the `consider_ecc` argument in `PunchingShearSection.solve()` to True. Note this argument is set to False by default because it can occasionally give unexpected results at corner columns or perimeter with stud rails, and it is more conservative to ignore it.
-
-s.
-
-> [!NOTE]
-> wthisj will automatically rotate a section's local axes to the principal orientation. Simply set the `auto_rotate` argument in `PunchingShearSection.solve()` to True (note this argument is set to True by default). In the backend, the entire geometry is rotated, rather than the moment vector, because the former is easier to implement programmatically.
-
-> To create a polygonal shear perimeter, simply create a `PunchingShearSection()` object and provide a non-zero value to the  `studrail_length` argument. Note you do not have to specify stud spacings, number of rails per face, etc. Wthisj does not calculate concrete shear capacities. All we care about is establishing the polygonal shape. 
-
-
-
-> [!NOTE]
->
-> It turns out $I_{x}$ and $I_{y}$ approximates $J_{cx}$ and $J_{cy}$ very well. The former is usually around 95% of the latter, and since $J_c$ is on the denominator, using the ACI 421.1R equations will always be more conservative. In effect, we are discarding the weak axis $I_y$ term from the web areas (the one where slab depth is cubed), and end up just calculating a planar moment of inertia.
-
-
-
-> [!NOTE]
->
-> wthisj numerically approximates $I_x$ and $I_y$ by discretizing the perimeter into tiny 0.5 inch fibers, each fiber has an infinitesimal area (dA) which is then summed to approximate the moment of inertia integrals. The default fiber size is usually accurate enough; however, users may opt to reduce the fiber size further by changing the `PATCH_SIZE` argument when initializing a `PunchingShearSection()` object.
 
 
 
